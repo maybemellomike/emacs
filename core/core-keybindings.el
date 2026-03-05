@@ -1,4 +1,4 @@
-;;; core-keybindings.el --- Spacemacs Core File -*- lexical-binding: t -*-
+;; core-keybindings.el --- Spacemacs Core File -*- lexical-binding: t -*-
 ;;
 ;; Copyright (c) 2012-2025 Sylvain Benner & Contributors
 ;;
@@ -59,7 +59,7 @@ gui, translate to [C-i]. Otherwise, [9] (TAB)."
 sequence. NAME is a string used as the prefix command."
   (declare (indent defun))
   (apply #'which-key-add-keymap-based-replacements spacemacs-default-map
-    prefix name more))
+         prefix name more))
 
 (defun spacemacs/declare-prefix-for-mode (mode prefix name &optional _)
   "Declare a prefix PREFIX. MODE is the mode in which this prefix command should
