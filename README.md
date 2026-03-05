@@ -6,4 +6,11 @@ I have no idea what I'm doing here this is a wild program. Just so I can feel li
 
 Being that I'm on NixOS and everything is inherently difficult with Emacs, Spacemacs is what I'm going with initially here as the keybindings make enough sense and the theme I've actually got it working to match what I'm rockin here. Also unlike DoomEmacs it's really just a repo of dotfiles. 
 
+## Goals
+
+What I'm hoping to accomplish here is maybe creating a sort of all inclusive blog writing situation. Maybe like a live preview on the right and the file on the left for both markdown rendered into a browser for the Hugo sites and then maybe a LaTeX one or Typst one as well? 
+
+While technically possible, my very limited skill set may limit how far this experiment goes. 
+
+
 
