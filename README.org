@@ -4,7 +4,7 @@ I have /no idea/ what I'm doing here this is a wild program. Just so I can feel 
 
 * Personal Config
 
-![](/scrot/scrot.png)
+[[file:./scrot/scrot.png]]
 Initially I started out with Spacemacs as it was something I could clone and just point the emacs client to when I opened it up but holy moly even starting from scratch it gets so complicated so quickly I can see why people talk about distros hampering their understanding!
 
 I deleted all that Spacemacs stuff and decided to go from scratch which is now what is in this repo. I doubt anything new will come out of this I'm more interested in seeing if I can find a reason to use this over the Unix tools and Vim based setup I've become so used to over the last 15 years.
