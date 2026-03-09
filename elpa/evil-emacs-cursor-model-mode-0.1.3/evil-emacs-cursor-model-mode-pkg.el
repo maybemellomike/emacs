@@ -1,0 +1,2 @@
+;; Generated package description from evil-emacs-cursor-model-mode.el  -*- mode: lisp-data; no-byte-compile: t; lexical-binding:t -*-
+(define-package "evil-emacs-cursor-model-mode" "0.1.3" "Emacs' cursor model in evil-mode" '((emacs "29.1") (evil "1.15.0")) :commit "05f797f261cd4ee30166c326eeee63d776e26143" :maintainer '("Peter Friis Jensen" . "maxfriis@gmail.com") :keywords '("convenience" "files") :url "https://github.com/maxfriis/evil-emacs-cursor-model-mode")

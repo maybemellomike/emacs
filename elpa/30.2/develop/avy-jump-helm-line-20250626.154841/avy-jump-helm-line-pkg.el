@@ -1,0 +1,2 @@
+;;; Generated package description from avy-jump-helm-line.el  -*- no-byte-compile: t -*-
+(define-package "avy-jump-helm-line" "20250626.154841" "Avy-jump to a candidate in helm window" '((avy "0.4.0") (helm "1.6.3")) :authors '(("Junpeng Qiu" . "qjpchmail@gmail.com")) :maintainer '("Junpeng Qiu" . "qjpchmail@gmail.com") :keywords '("extensions") :url "https://github.com/sunlin7/avy-jump-helm-line")
