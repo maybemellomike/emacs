@@ -2,9 +2,12 @@
 
 I have /no idea/ what I'm doing here this is a wild program. Just so I can feel like a well rounded person I'm givin' this a go so I can say I've tried it. 
 
-** SpaceMacs
+* Personal Config
 
-Being that I'm on _NixOS_ and everything is inherently difficult with Emacs, Spacemacs is what I'm going with initially here as the keybindings make enough sense and the theme I've actually got it working to match what I'm rockin here. Also unlike DoomEmacs it's really just a repo of dotfiles. 
+![](/scrot/scrot.png)
+Initially I started out with Spacemacs as it was something I could clone and just point the emacs client to when I opened it up but holy moly even starting from scratch it gets so complicated so quickly I can see why people talk about distros hampering their understanding!
+
+I deleted all that Spacemacs stuff and decided to go from scratch which is now what is in this repo. I doubt anything new will come out of this I'm more interested in seeing if I can find a reason to use this over the Unix tools and Vim based setup I've become so used to over the last 15 years.
 
 ** Goals
 
