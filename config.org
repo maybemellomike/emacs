@@ -1,6 +1,6 @@
 #+TITLE: My Emacs Configuration
 #+AUTHOR: Liam
-
+#+DESCRIPTION: No, I don't know too much whats happening here but hey something's at least happening
 #+PROPERTY: header-args :tangle config.el
 
 * Bootstrap: use-package
@@ -22,14 +22,15 @@ are set up and that ~use-package~ will auto-install any package declared with
 
 ;; use-package is built-in from Emacs 29. This line makes it auto-install
 ;; any package declared with :ensure t if it isn't already present.
+;; Always refresh the package list on startup so MELPA version
+;; hashes never go stale and cause "Not found" install errors.
+(package-refresh-contents)
+
 (require 'use-package)
 (setq use-package-always-ensure t)
 #+END_SRC
 
 * UI Cleanup
-
-This gets rid of some of the built in GUI elements like the menu bar, tool bar, and scroll bar which are, well ugly.
-
 #+BEGIN_SRC emacs-lisp
 (tool-bar-mode -1)
 (menu-bar-mode -1)
@@ -38,17 +39,22 @@ This gets rid of some of the built in GUI elements like the menu bar, tool bar, 
 
 * Relative Line Numbers
 
-The two keys to a stable gutter width are:
+The keys to a stable gutter width are:
 1. Set ~display-line-numbers-width~ globally as a default BEFORE the mode enables.
-2. In org-mode, re-assert it AFTER ~variable-pitch-mode~ fires, because proportional
-   fonts cause Emacs to recalculate gutter metrics. We do this by appending to the
-   hook (the ~t~ argument to ~add-hook~) so it runs last.
-
- For some reason this issue of the changing indentiation is still persistant in Org Mode documents but it works elsewhere. 
+2. Set ~display-line-numbers-right-justify~ to ~t~ so numbers are right-aligned
+   within the fixed-width gutter. Without this, numbers are left-aligned and the
+   text body shifts sideways whenever the relative number gains or loses a digit
+   as the cursor moves.
+3. In org-mode, re-assert the width AFTER ~variable-pitch-mode~ fires, because
+   proportional fonts cause Emacs to recalculate gutter metrics. We do this by
+   appending to the hook (the ~t~ argument to ~add-hook~) so it runs last.
 
 #+BEGIN_SRC emacs-lisp
 (setq-default display-line-numbers-type 'relative)
-(setq-default display-line-numbers-width 3)
+(setq-default display-line-numbers-width 4)  ;; 4 = 3 digit columns + 1 padding so
+                                              ;; two-digit numbers never reflow the gutter
+(setq-default display-line-numbers-right-justify t) ;; right-align numbers so the text
+                                                     ;; body stays anchored as digits change
 (global-display-line-numbers-mode t)
 
 (dolist (mode '(term-mode-hook
@@ -63,15 +69,12 @@ The two keys to a stable gutter width are:
 ;; The trailing `t` appends this hook so it runs after all others on the hook list.
 (add-hook 'org-mode-hook
           (lambda ()
-            (setq-local display-line-numbers-width 3)
+            (setq-local display-line-numbers-width 4)
             (setq-local display-line-numbers-width-start nil))
           t)
 #+END_SRC
 
 * Evil
-
-I don't know how anyone could Emacs themselves without this snippit right here.
-
 #+BEGIN_SRC emacs-lisp
 (use-package evil
   :init
@@ -124,9 +127,6 @@ matching, ~marginalia~ adds annotations, and ~consult~ provides the search comma
 
 * Theme
 
-Simple and this actually appears to work.
-
-
 #+BEGIN_SRC emacs-lisp
 (use-package doom-themes
   :custom
@@ -135,12 +135,101 @@ Simple and this actually appears to work.
   (load-theme 'doom-monokai-machine t))
 #+END_SRC
 
+** Theme Toggle
+
+Toggles between the dark theme (~doom-monokai-machine~) and the light theme
+(~ef-cyprus~). ~C-c T~ is used because ~C-c t~ is already bound to the eshell toggle.
+
+~ef-cyprus~ is part of the ~ef-themes~ package by Protesilaos Stavrou. The toggle
+tracks the current state via a simple variable so repeated presses always flip
+between exactly the two themes and nothing else.
+
+Because the ~org-block~ face background is not set by most themes — they leave it
+to the user — we re-apply it explicitly after each toggle via
+~my/apply-org-theme-faces~. This ensures code blocks always have an appropriate
+tinted background on both dark and light themes rather than a jarring mismatch.
+
+#+BEGIN_SRC emacs-lisp
+(use-package ef-themes
+  :custom
+  (custom-safe-themes t))
+
+(defvar my/dark-theme  'doom-monokai-machine
+  "The dark theme to use in `my/toggle-theme'.")
+
+(defvar my/light-theme 'ef-cyprus
+  "The light theme to use in `my/toggle-theme'.")
+
+(defvar my/current-theme 'dark
+  "Tracks which theme is active: the symbol `dark' or `light'.")
+
+(defun my/apply-org-theme-faces ()
+  "Re-apply org code-block faces to match the currently active theme.
+Called after every theme switch so blocks never inherit stale colours."
+  (if (eq my/current-theme 'dark)
+      ;; Dark theme — monokai-flavoured block colours
+      (custom-set-faces
+       '(org-block            ((t (:inherit fixed-pitch :background "#2d2d2d"))))
+       '(org-block-begin-line ((t (:inherit fixed-pitch :foreground "#aaaaaa" :background "#2d2d2d"))))
+       '(org-block-end-line   ((t (:inherit fixed-pitch :foreground "#aaaaaa" :background "#2d2d2d"))))
+       '(org-code             ((t (:inherit fixed-pitch :foreground "#A6E22E")))))
+    ;; Light theme — ef-cyprus uses warm off-whites; a pale grey block reads cleanly
+    (custom-set-faces
+     '(org-block            ((t (:inherit fixed-pitch :background "#eef0e8"))))
+     '(org-block-begin-line ((t (:inherit fixed-pitch :foreground "#888c80" :background "#eef0e8"))))
+     '(org-block-end-line   ((t (:inherit fixed-pitch :foreground "#888c80" :background "#eef0e8"))))
+     '(org-code             ((t (:inherit fixed-pitch :foreground "#3a5f00")))))))
+
+(defun my/toggle-theme ()
+  "Toggle between `my/dark-theme' and `my/light-theme'."
+  (interactive)
+  (if (eq my/current-theme 'dark)
+      (progn
+        (mapc #'disable-theme custom-enabled-themes)
+        (load-theme my/light-theme t)
+        (setq my/current-theme 'light)
+        (my/apply-org-theme-faces)
+        (message "Switched to light theme: %s" my/light-theme))
+    (progn
+      (mapc #'disable-theme custom-enabled-themes)
+      (load-theme my/dark-theme t)
+      (setq my/current-theme 'dark)
+      (my/apply-org-theme-faces)
+      (message "Switched to dark theme: %s" my/dark-theme))))
+
+;; Apply the correct faces for the initial dark theme on startup
+(my/apply-org-theme-faces)
+
+(global-set-key (kbd "C-c T") #'my/toggle-theme)
+#+END_SRC
+
 * Icons
 #+BEGIN_SRC emacs-lisp
 (use-package nerd-icons)
 #+END_SRC
 
 * Org Mode
+
+Headings use a palette drawn from doom-monokai-machine's own accent colours so
+everything feels native to the theme. The colours chosen are:
+
+- Level 1 :: ~#F92672~ — pink/red, high visual weight for top-level headings
+- Level 2 :: ~#66D9EF~ — cyan, distinct from level 1 at a glance
+- Level 3 :: ~#A6E22E~ — green
+- Level 4 :: ~#E6DB74~ — yellow
+- Level 5 :: ~#FD971F~ — orange
+- Level 6 :: ~#AE81FF~ — purple
+- Level 7 / 8 :: muted grey, de-emphasised since deep nesting is rare
+
+Other coloured elements:
+- ~org-todo~ / ~org-done~ — red and green keyword labels
+- ~org-date~ — cyan timestamp links
+- ~org-tag~ — muted orange tags
+- ~org-link~ — cyan underlined links
+- ~org-list-dt~ — yellow definition-list terms
+- ~org-document-title~ — large white bold title at the top of the file
+- ~org-document-info~ — muted grey for #+AUTHOR, #+DATE etc.
+
 #+BEGIN_SRC emacs-lisp
 (use-package org
   :ensure nil  ;; org is built-in; :ensure nil prevents use-package trying to reinstall it
@@ -148,18 +237,34 @@ Simple and this actually appears to work.
   ((org-mode . variable-pitch-mode)
    (org-mode . visual-line-mode))
   :custom-face
-  (org-level-1 ((t (:height 1.4 :weight bold))))
-  (org-level-2 ((t (:height 1.3 :weight bold))))
-  (org-level-3 ((t (:height 1.2 :weight bold))))
-  (org-level-4 ((t (:height 1.1 :weight bold))))
-  (org-level-5 ((t (:height 1.05))))
-  (org-level-6 ((t (:height 1.02))))
-  (org-level-7 ((t (:height 1.0))))
-  (org-level-8 ((t (:height 1.0))))
-  (org-block            ((t (:inherit fixed-pitch :background "#2d2d2d"))))
-  (org-block-begin-line ((t (:inherit fixed-pitch :foreground "#aaaaaa"))))
-  (org-block-end-line   ((t (:inherit fixed-pitch :foreground "#aaaaaa"))))
-  (org-code             ((t (:inherit fixed-pitch)))))
+  ;; Headings — height + weight carried over, foreground colours added
+  (org-level-1 ((t (:height 1.4 :weight bold  :foreground "#F92672"))))
+  (org-level-2 ((t (:height 1.3 :weight bold  :foreground "#66D9EF"))))
+  (org-level-3 ((t (:height 1.2 :weight bold  :foreground "#A6E22E"))))
+  (org-level-4 ((t (:height 1.1 :weight bold  :foreground "#E6DB74"))))
+  (org-level-5 ((t (:height 1.05             :foreground "#FD971F"))))
+  (org-level-6 ((t (:height 1.02             :foreground "#AE81FF"))))
+  (org-level-7 ((t (:height 1.0              :foreground "#75715E"))))
+  (org-level-8 ((t (:height 1.0              :foreground "#75715E"))))
+  ;; Code blocks — background is intentionally unset here so it inherits from
+  ;; the active theme. my/apply-org-theme-faces re-applies theme-appropriate
+  ;; colours whenever the theme is toggled (see Theme Toggle section).
+  (org-block            ((t (:inherit fixed-pitch))))
+  (org-block-begin-line ((t (:inherit fixed-pitch))))
+  (org-block-end-line   ((t (:inherit fixed-pitch))))
+  (org-code             ((t (:inherit fixed-pitch))))
+  ;; Todo keywords
+  (org-todo ((t (:foreground "#F92672" :weight bold))))
+  (org-done ((t (:foreground "#A6E22E" :weight bold))))
+  ;; Timestamps, tags, links
+  (org-date ((t (:foreground "#66D9EF" :underline t))))
+  (org-tag  ((t (:foreground "#FD971F" :weight normal))))
+  (org-link ((t (:foreground "#66D9EF" :underline t))))
+  ;; Definition list terms
+  (org-list-dt ((t (:foreground "#E6DB74" :weight bold))))
+  ;; Document title and info lines (#+TITLE, #+AUTHOR etc.)
+  (org-document-title ((t (:height 1.5 :weight bold :foreground "#F8F8F2"))))
+  (org-document-info  ((t (:foreground "#75715E")))))
 
 (use-package org-modern
   :after org
@@ -168,8 +273,6 @@ Simple and this actually appears to work.
 #+END_SRC
 
 * Zen Mode (olivetti — no fullscreen)
-
-In LaTeX files and Typst files I can M-x zenmode and this will do what the Vim plugin does within the frame showing the document. 
 #+BEGIN_SRC emacs-lisp
 (use-package olivetti
   :commands olivetti-mode
@@ -195,9 +298,6 @@ In LaTeX files and Typst files I can M-x zenmode and this will do what the Vim p
 #+END_SRC
 
 * Text Wrapping / Word-Processor Behavior
-
-Seems to work alright for the time being making things more readable. 
-
 #+BEGIN_SRC emacs-lisp
 (defun my/text-mode-line-wrapping ()
   "Enable word-wrapping like a word processor."
@@ -215,9 +315,229 @@ Seems to work alright for the time being making things more readable.
 #+END_SRC
 
 * Shrink Path
-
-No idea what this does
-
 #+BEGIN_SRC emacs-lisp
 (use-package shrink-path)
+#+END_SRC
+
+* Config Reload
+
+~C-c r~ tangles ~config.org~ to ~config.el~ and hot-reloads it without restarting Emacs.
+
+How it works:
+- ~org-babel-tangle-file~ writes a fresh ~config.el~ from the org source blocks.
+- ~load-file~ evaluates that file in the running Emacs session, applying every change
+  immediately.
+- The function is bound globally so it works from any buffer, not just when
+  ~config.org~ is open.
+
+One thing to be aware of: a hot-reload re-evaluates the whole file, which is fine
+for settings and keybinds. Packages that were already loaded won't be unloaded —
+~use-package~ will simply skip them as already-present, which is the correct
+behaviour. If you ever add a brand new package and ~C-c r~ doesn't install it,
+a single restart will sort it out.
+
+#+BEGIN_SRC emacs-lisp
+(defun my/reload-config ()
+  "Tangle config.org to config.el and reload it without restarting Emacs."
+  (interactive)
+  (let ((org-file (expand-file-name "config.org" user-emacs-directory))
+        (el-file  (expand-file-name "config.el"  user-emacs-directory)))
+    (org-babel-tangle-file org-file el-file "emacs-lisp")
+    (load-file el-file)
+    (message "Config reloaded successfully.")))
+
+(global-set-key (kbd "C-c r") #'my/reload-config)
+#+END_SRC
+
+* System Clipboard
+
+Makes the ~"+"~ and ~"*"~ registers in Evil behave exactly like they do in Neovim —
+~"+p~ pastes from the system clipboard and ~"+y~ yanks into it.
+
+In Neovim this works because Neovim talks to the OS clipboard directly. Emacs has
+its own internal kill-ring that is separate from the system clipboard by default.
+The two settings below bridge that gap:
+
+- ~select-enable-clipboard t~ makes every Emacs yank/kill also write to the OS
+  clipboard, mirroring Neovim's ~clipboard=unnamed~.
+- ~select-enable-primary t~ additionally syncs the X11 primary selection (the
+  middle-click buffer on Linux). Remove this line if you are on macOS or Windows,
+  or if you find it interferes with other workflows.
+- ~evil-want-clipboard t~ (set in ~:init~ before Evil loads) tells Evil to route
+  all yank and delete operations through the ~"+"~ register by default, exactly
+  matching Neovim's ~clipboard+=unnamedplus~.
+
+The ~xclip~ package is used as the backend on Linux because Emacs running inside a
+terminal otherwise cannot reach the graphical clipboard. If you are running Emacs
+as a GUI application (~emacs~ rather than ~emacs -nw~) it will still work correctly —
+~xclip~ simply becomes a no-op in that context. On macOS the built-in ~pbcopy~/~pbpaste~
+integration is used automatically and ~xclip~ is skipped.
+
+#+BEGIN_SRC emacs-lisp
+;; Bridge Emacs kill-ring to the OS clipboard
+(setq select-enable-clipboard t)
+(setq select-enable-primary t)   ;; Linux X11 primary selection — remove on macOS/Windows
+
+;; Tell Evil to use the system clipboard register by default,
+;; so plain `y` and `p` also go through "+", matching Neovim's
+;; clipboard+=unnamedplus behaviour.
+(setq evil-want-clipboard t)
+
+;; xclip provides clipboard access when Emacs is running in a terminal on Linux.
+;; Safe to keep on macOS — the package detects the platform and does nothing there.
+(use-package xclip
+  :config
+  (xclip-mode 1))
+#+END_SRC
+
+* Keybinds
+
+** Window Focus (navigate between splits)
+
+Emacs calls splits "windows". These binds follow the Vim hjkl convention exactly:
+~h~ left, ~l~ right, ~j~ down, ~k~ up — so they transfer directly from Evil muscle memory.
+
+~C-c h/j/k/l~ do not conflict with any default Emacs bindings. The ~C-c~ prefix
+followed by a plain letter is reserved by Emacs for user-defined keys, so this is
+the correct namespace to use.
+
+#+BEGIN_SRC emacs-lisp
+(global-set-key (kbd "C-c h") #'windmove-left)
+(global-set-key (kbd "C-c l") #'windmove-right)
+(global-set-key (kbd "C-c j") #'windmove-down)
+(global-set-key (kbd "C-c k") #'windmove-up)
+#+END_SRC
+
+** Window Movement (swap pane positions)
+
+These move the *contents* of the current window in the given direction, swapping
+it with whichever window is adjacent. Uses ~windmove-swap-states-*~, which is
+built into Emacs 27+.
+
+#+BEGIN_SRC emacs-lisp
+(global-set-key (kbd "C-c m h") #'windmove-swap-states-left)
+(global-set-key (kbd "C-c m l") #'windmove-swap-states-right)
+(global-set-key (kbd "C-c m j") #'windmove-swap-states-down)
+(global-set-key (kbd "C-c m k") #'windmove-swap-states-up)
+#+END_SRC
+
+** Terminal (eshell in a bottom split)
+
+Opens an eshell in a horizontal split occupying the bottom third of the current
+frame. If an eshell buffer is already open it reuses it rather than opening a
+second one. Pressing ~C-c t~ again from any window closes the eshell split and
+returns focus to the window you were in.
+
+#+BEGIN_SRC emacs-lisp
+(defun my/toggle-eshell-bottom ()
+  "Toggle an eshell in a horizontal split at the bottom third of the frame."
+  (interactive)
+  (let* ((eshell-buf-name "*eshell*")
+         (existing-win (get-buffer-window eshell-buf-name)))
+    (if existing-win
+        ;; If eshell window is already visible, close it and return focus
+        (progn
+          (delete-window existing-win)
+          (message "Eshell closed."))
+      ;; Otherwise open a new split sized to one third of the frame height
+      (let* ((total-height (frame-height))
+             (shell-height (max 10 (/ total-height 3)))
+             (new-win (split-window-below (- total-height shell-height))))
+        (select-window new-win)
+        (if (get-buffer eshell-buf-name)
+            (switch-to-buffer eshell-buf-name)
+          (eshell))))))
+
+(global-set-key (kbd "C-c t") #'my/toggle-eshell-bottom)
+#+END_SRC
+
+** Close Window
+
+Closes the currently focused split. Emacs' built-in ~delete-window~ is used
+directly — ~C-c x~ is an unoccupied user key in the default bindings.
+
+#+BEGIN_SRC emacs-lisp
+(global-set-key (kbd "C-c x") #'delete-window)
+#+END_SRC
+
+** Zen Mode
+
+Exposes ~my/zen-mode~ (defined in the Zen Mode section) on a dedicated keybind so
+it can be toggled from any buffer without going through ~M-x~. ~C-c g~ is used here
+because ~C-c C-g~ is reserved by Emacs as a universal quit/abort chord and cannot
+be safely rebound.
+
+#+BEGIN_SRC emacs-lisp
+(global-set-key (kbd "C-c g") #'my/zen-mode)
+#+END_SRC
+
+* Padding
+
+Emacs has no single "padding" setting, so three separate mechanisms are combined
+to produce the effect:
+
+- ~internal-border-width~ — a frame-level property that adds a gap of ~5px~ between
+  the outer edge of the Emacs frame and the inner window area. This is the global
+  outer padding and is set once on the default frame parameters.
+
+- ~window-margins~ — per-window left and right gutters measured in character columns.
+  Set to ~3~ columns on each side inside every window so text does not sit flush
+  against the split border or the frame edge.
+
+- ~header-line-format~ — normally used for a status bar at the top of a window.
+  By setting it to a single space string it renders as a blank line, producing a
+  top padding gap within each window. There is no built-in equivalent for bottom
+  padding, but combined with the margins this breaks the flush appearance on all
+  four sides.
+
+All three are applied via ~window-configuration-change-hook~ so they reapply
+automatically whenever a new split is created or a buffer is switched.
+
+The ~header-line~ face is explicitly set to inherit the default background so it
+renders as invisible padding rather than a visible grey bar. ~:box nil~ and
+~:underline nil~ remove any border the theme may add to the face.
+
+#+BEGIN_SRC emacs-lisp
+;; Outer frame border: 5px gap between the OS window edge and Emacs' window area
+(add-to-list 'default-frame-alist '(internal-border-width . 5))
+
+;; Make the header-line face invisible — same background as the buffer,
+;; no box, no underline, so it acts as silent top padding only.
+(custom-set-faces
+ '(header-line ((t (:inherit default
+                    :background unspecified
+                    :foreground unspecified
+                    :box nil
+                    :underline nil)))))
+
+;; Apply per-window padding to every window whenever the layout changes
+(defun my/set-window-padding ()
+  "Add left/right margins and a blank header line to every window."
+  (walk-windows
+   (lambda (win)
+     (unless (window-minibuffer-p win)
+       ;; 3 columns of left and right margin inside every split
+       (set-window-margins win 3 3)
+       ;; Blank header line acts as top padding
+       (with-current-buffer (window-buffer win)
+         (setq-local header-line-format " "))))
+   nil t))
+
+(add-hook 'window-configuration-change-hook #'my/set-window-padding)
+
+;; Run once immediately so padding is present before any layout changes occur
+(my/set-window-padding)
+#+END_SRC
+* Language Support: LSP, Typst, LaTeX, Markdown
+
+
+* Silence
+
+Disables the audible bell and the visual flash fallback that Emacs uses when the
+bell is muted. Without both settings Emacs will either beep through the system
+speaker or flash the frame depending on the desktop environment.
+
+#+BEGIN_SRC emacs-lisp
+(setq ring-bell-function 'ignore)  ;; disable audible bell entirely
+(setq visible-bell nil)            ;; disable the visual flash fallback
 #+END_SRC
