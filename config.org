@@ -11,7 +11,7 @@ Here we go, gettin' wild with Emacs. I'm not even entirely sure what sort of thi
 
 Hoping to keep this as portable as possible I was reading that using straight.el was a pretty clean way to do so.
 
-~straight.el~ is a declarative, reproducible package manager that clones
+straight.el~ is a declarative, reproducible package manager that clones
 packages directly from their source repositories (Git) rather than downloading
 pre-built tarballs from an archive. This means:
 
@@ -89,7 +89,7 @@ The keys to a stable gutter width are:
 (dolist (mode '(term-mode-hook
                 shell-mode-hook
                 eshell-mode-hook
-                vterm-mode-hook
+               vterm-mode-hook
                 treemacs-mode-hook
                 minibuffer-setup-hook))
   (add-hook mode (lambda () (display-line-numbers-mode 0))))
@@ -423,6 +423,120 @@ a single restart will sort it out.
     (message "Config reloaded successfully.")))
 
 (global-set-key (kbd "C-c r") #'my/reload-config)
+
+(defun my/open-config ()
+  "Open config.org in the current window."
+  (interactive)
+  (find-file (expand-file-name "config.org" user-emacs-directory)))
+
+(global-set-key (kbd "C-c o c") #'my/open-config)
+#+END_SRC
+
+* Project Layouts
+
+Each function below opens a purpose-built window layout for a specific project
+or directory. They all follow the same pattern:
+
+1. ~delete-other-windows~ for a clean slate
+2. ~dired~ in the project directory in the top window
+3. A visible eshell pane in the bottom third, ~cd~'d into the project directory
+4. Focus returned to dired so you can navigate immediately
+
+The ~C-c o~ prefix is used throughout: ~o~ for "open", followed by a letter
+identifying the project.
+
+A shared helper ~my/project-layout~ handles the common dired + eshell
+scaffolding so each project function only needs to declare its directory,
+buffer names, and any extra background processes.
+
+#+BEGIN_SRC emacs-lisp
+(defun my/project-layout (dir eshell-buf-name)
+  "Open a standard project layout for DIR.
+Creates a dired window on top and an eshell in a bottom split,
+both rooted at DIR.  ESHELL-BUF-NAME is the buffer name to use
+for the eshell so each project gets its own independent shell."
+  (unless (file-directory-p dir)
+    (user-error "Directory not found: %s" dir))
+  (delete-other-windows)
+  (dired dir)
+  (let* ((total-height (frame-height))
+         (shell-height (max 10 (/ total-height 3)))
+         (eshell-win   (split-window-below (- total-height shell-height))))
+    (select-window eshell-win)
+    (if (get-buffer eshell-buf-name)
+        (progn
+          (switch-to-buffer eshell-buf-name)
+          (with-current-buffer eshell-buf-name
+            (eshell/cd dir)
+            (eshell-reset)))
+      ;; Create a new eshell with the desired buffer name
+      (let ((eshell-buffer-name eshell-buf-name))
+        (eshell 'new)))
+    (with-current-buffer eshell-buf-name
+      (eshell/cd dir)
+      (eshell-reset)))
+  (select-window (get-buffer-window (dired-noselect dir))))
+
+(defun my/bg-process (name dir command &rest args)
+  "Ensure a background process named NAME is running COMMAND in DIR.
+If a process with NAME is already live, does nothing.
+Output goes to a hidden buffer ' *NAME*' (leading space keeps it
+out of the buffer list)."
+  (unless (process-live-p (get-process name))
+    (let ((default-directory dir))
+      (apply #'start-process name (format " *%s*" name) command args)
+      (set-process-query-on-exit-flag (get-process name) nil))))
+#+END_SRC
+
+*** Dotfiles (~C-c o d~)
+
+Opens ~~/dots~ with dired on top and an eshell below.
+
+#+BEGIN_SRC emacs-lisp
+(defun my/open-dotfiles ()
+  "Open a dotfiles workspace: dired on ~/dots, eshell below."
+  (interactive)
+  (my/project-layout (expand-file-name "~/dots") "*eshell:dots*"))
+
+(global-set-key (kbd "C-c o d") #'my/open-dotfiles)
+#+END_SRC
+
+*** Personal Blog (~C-c o b~)
+
+Opens ~~/dox/blog~ with dired on top and an eshell below. Also starts a hidden
+~hugo server~ process in the background so the preview server is running while
+you work. The process is only spawned if it is not already live, so pressing
+~C-c o b~ repeatedly is safe. The Hugo output is accessible in the buffer
+~ *hugo:blog*~ if you need to check for errors.
+
+#+BEGIN_SRC emacs-lisp
+(defun my/open-blog ()
+  "Open the blog workspace: dired + eshell in ~/dox/blog.
+Starts a hidden hugo server process in the background."
+  (interactive)
+  (let ((dir (expand-file-name "~/dox/blog")))
+    (my/project-layout dir "*eshell:blog*")
+    (my/bg-process "hugo:blog" dir "hugo" "server")))
+
+(global-set-key (kbd "C-c o b") #'my/open-blog)
+#+END_SRC
+
+*** Sailing Blog (~C-c o s~)
+
+Opens ~~/dox/clean-rebuild~ with dired on top and an eshell below. Also starts
+a hidden ~hugo server~ process for this project in the background, independent
+of the blog server.
+
+#+BEGIN_SRC emacs-lisp
+(defun my/open-site ()
+  "Open the site workspace: dired + eshell in ~/dox/clean-rebuild.
+Starts a hidden hugo server process in the background."
+  (interactive)
+  (let ((dir (expand-file-name "~/dox/clean-rebuild")))
+    (my/project-layout dir "*eshell:site*")
+    (my/bg-process "hugo:site" dir "hugo" "server")))
+
+(global-set-key (kbd "C-c o s") #'my/open-site)
 #+END_SRC
 
 * System Clipboard
@@ -540,6 +654,49 @@ directly — ~C-c x~ is an unoccupied user key in the default bindings.
 (global-set-key (kbd "C-c x") #'delete-window)
 #+END_SRC
 
+** Close Window
+
+Closes the currently focused split. Emacs' built-in ~delete-window~ is used
+directly — ~C-c x~ is an unoccupied user key in the default bindings.
+
+#+BEGIN_SRC emacs-lisp
+(global-set-key (kbd "C-c x") #'delete-window)
+#+END_SRC
+
+** Window Zoom (toggle fullscreen split)
+
+~C-c f~ toggles the current window between fullscreen and the previous layout,
+similar to tmux's ~prefix-z~. On the first press the current window configuration
+is saved and ~delete-other-windows~ expands the focused window to fill the frame.
+On the second press the saved configuration is restored exactly as it was.
+
+~winner-mode~ is enabled to provide the configuration history that makes this
+possible. It is a built-in minor mode that records window layout changes and is
+also what allows ~C-c <left>~ / ~C-c <right>~ to step through layout history
+manually if you ever want that.
+
+#+BEGIN_SRC emacs-lisp
+(winner-mode 1)
+
+(defvar my/window-zoom--saved-config nil
+  "Saved window configuration before zooming, or nil when not zoomed.")
+
+(defun my/window-zoom-toggle ()
+  "Toggle the current window between fullscreen and the previous layout.
+Works like tmux prefix-z: first press expands, second press restores."
+  (interactive)
+  (if my/window-zoom--saved-config
+      (progn
+        (set-window-configuration my/window-zoom--saved-config)
+        (setq my/window-zoom--saved-config nil)
+        (message "Layout restored."))
+    (setq my/window-zoom--saved-config (current-window-configuration))
+    (delete-other-windows)
+    (message "Window zoomed — C-c f to restore.")))
+
+(global-set-key (kbd "C-c f") #'my/window-zoom-toggle)
+#+END_SRC
+
 ** Zen Mode
 
 Exposes ~my/zen-mode~ (defined in the Zen Mode section) on a dedicated keybind so
@@ -627,6 +784,43 @@ succeed.
   ;;(pdf-tools-install :no-query))   ;; compile epdfinfo silently; no interactive prompt
 #+END_SRC
 
+* Spell Checking (jinx)
+
+~jinx~ is a fast spell checker backed by the system ~enchant-2~ library, which
+in turn delegates to whichever dictionary backend is installed (Hunspell,
+Aspell, Nuspell etc.). It underlines misspelled words lazily as you type and
+provides Vim-style next/previous navigation between errors.
+
+The only OS dependency is ~enchant-2~ with at least one dictionary. On NixOS:
+
+#+BEGIN_EXAMPLE
+environment.systemPackages = [ pkgs.enchant pkgs.hunspellDicts.en-us ];
+#+END_EXAMPLE
+
+On Debian/Ubuntu: ~sudo apt install enchant-2 hunspell-en-us~.
+On macOS (Homebrew): ~brew install enchant~ (dictionary bundled).
+
+*How it works:*
+- ~C-c s~ toggles ~jinx-mode~ on and off in the current buffer. When active,
+  misspelled words are underlined.
+- ~]s~ jumps to the next misspelled word (mirrors Vim's ~]s~).
+- ~[s~ jumps to the previous misspelled word (mirrors Vim's ~[s~).
+- ~C-c $~ opens a correction menu at point with suggested fixes (the default
+  ~jinx~ correction bind, kept as-is since it does not conflict with anything).
+
+The ~]s~ / ~[s~ bindings are added to ~evil-normal-state-map~ so they behave
+exactly as they do in Vim — available globally whenever Evil is in normal
+state, not just when ~jinx-mode~ is active, so the muscle memory is consistent.
+
+#+BEGIN_SRC emacs-lisp
+(use-package jinx
+  :bind
+  (("C-c s"   . jinx-mode)         ;; toggle spell checking in current buffer
+   ("C-c $"   . jinx-correct)      ;; open correction menu at point
+   :map evil-normal-state-map
+   ("]s" . jinx-next)              ;; next misspelling  (Vim ]s)
+   ("[s" . jinx-previous)))        ;; previous misspelling (Vim [s)
+#+END_SRC
 
 * Silence
 
