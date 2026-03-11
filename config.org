@@ -539,6 +539,28 @@ Starts a hidden hugo server process in the background."
 (global-set-key (kbd "C-c o s") #'my/open-site)
 #+END_SRC
 
+*** Kill All Hugo Servers (~C-c o k~)
+
+Kills every background process whose name starts with ~hugo:~, regardless of
+which project it belongs to. Useful for a clean shutdown when you are done
+working across multiple projects and don't want to stop them individually.
+
+#+BEGIN_SRC emacs-lisp
+(defun my/stop-all-hugo ()
+  "Kill all background hugo server processes started by project layouts."
+  (interactive)
+  (let ((killed 0))
+    (dolist (proc (process-list))
+      (when (string-prefix-p "hugo:" (process-name proc))
+        (kill-process proc)
+        (cl-incf killed)))
+    (if (zerop killed)
+        (message "No hugo servers were running.")
+      (message "Stopped %d hugo server%s." killed (if (= killed 1) "" "s")))))
+
+(global-set-key (kbd "C-c o k") #'my/stop-all-hugo)
+#+END_SRC
+
 * System Clipboard
 
 Makes the ~"+"~ and ~"*"~ registers in Evil behave exactly like they do in Neovim —
@@ -832,3 +854,4 @@ speaker or flash the frame depending on the desktop environment.
 (setq ring-bell-function 'ignore)  ;; disable audible bell entirely
 (setq visible-bell nil)            ;; disable the visual flash fallback
 #+END_SRC
+
