@@ -1,33 +1,54 @@
 #+TITLE: My Emacs Configuration
 #+AUTHOR: Liam
 #+DESCRIPTION: No, I don't know too much whats happening here but hey something's at least happening
+
 #+PROPERTY: header-args :tangle config.el
 
-* Bootstrap: use-package
+* Bootstrap: straight.el + use-package
 
-~use-package~ is built into Emacs 29+. This block ensures the package archives
-are set up and that ~use-package~ will auto-install any package declared with
-~:ensure t~, replacing the manual ~dolist~ install loop from before.
+~straight.el~ is a declarative, reproducible package manager that clones
+packages directly from their source repositories (Git) rather than downloading
+pre-built tarballs from an archive. This means:
+
+- Any package reachable by a Git URL can be installed, not just those on MELPA
+- No ~package-refresh-contents~ on every startup — straight only hits the
+  network when you explicitly ask it to
+- Fully portable: on a new machine the first Emacs startup clones everything
+  from scratch with no manual steps
+
+~use-package~ is retained as the configuration frontend. The two integrate
+via ~straight-use-package-by-default~, which makes every ~use-package~
+declaration automatically route through ~straight.el~ for installation.
+The ~:ensure t~ / ~:ensure nil~ flags from the old ~package.el~ setup are
+no longer needed and have been removed throughout.
+
+The bootstrap snippet below is the canonical straight.el self-installer. It
+checks whether straight is already installed and, if not, clones it from
+GitHub. This runs on every startup but is effectively instant once the file
+exists.
 
 #+BEGIN_SRC emacs-lisp
-(require 'package)
-(setq package-archives
-      '(("melpa" . "https://melpa.org/packages/")
-        ("gnu"   . "https://elpa.gnu.org/packages/")
-        ("nongnu". "https://elpa.nongnu.org/nongnu/")))
-(package-initialize)
+;; Bootstrap straight.el
+(defvar bootstrap-version)
+(let ((bootstrap-file
+       (expand-file-name
+        "straight/repos/straight.el/bootstrap.el"
+        (or (bound-and-true-p straight-base-dir) user-emacs-directory)))
+      (bootstrap-version 7))
+  (unless (file-exists-p bootstrap-file)
+    (with-current-buffer
+        (url-retrieve-synchronously
+         "https://raw.githubusercontent.com/radian-software/straight.el/develop/install.el"
+         'silent 'inhibit-cookies)
+      (goto-char (point-max))
+      (eval-print-last-sexp)))
+  (load bootstrap-file nil 'nomessage))
 
-(unless package-archive-contents
-  (package-refresh-contents))
-
-;; use-package is built-in from Emacs 29. This line makes it auto-install
-;; any package declared with :ensure t if it isn't already present.
-;; Always refresh the package list on startup so MELPA version
-;; hashes never go stale and cause "Not found" install errors.
-(package-refresh-contents)
-
-(require 'use-package)
-(setq use-package-always-ensure t)
+;; Tell straight.el to use use-package as its declaration frontend.
+;; straight-use-package-by-default means every use-package form will
+;; automatically install via straight without needing :straight t each time.
+(straight-use-package 'use-package)
+(setq straight-use-package-by-default t)
 #+END_SRC
 
 * UI Cleanup
@@ -232,7 +253,8 @@ Other coloured elements:
 
 #+BEGIN_SRC emacs-lisp
 (use-package org
-  :ensure nil  ;; org is built-in; :ensure nil prevents use-package trying to reinstall it
+  :straight (:type built-in)  ;; tell straight to use Emacs' built-in org rather than
+                               ;; cloning from MELPA, avoiding version conflicts
   :hook
   ((org-mode . variable-pitch-mode)
    (org-mode . visual-line-mode))
@@ -288,13 +310,18 @@ Other coloured elements:
         (olivetti-mode 1)
         (olivetti-set-width 88)
         (display-line-numbers-mode 0))))
-  :hook
-  ((LaTeX-mode . my/zen-mode)
-   (latex-mode . my/zen-mode))
-   ;; Uncomment once you have a typst major mode installed (e.g. typst-ts-mode):
-   ;; (typst-mode . my/zen-mode)
   :bind
   ("C-c z" . my/zen-mode))
+
+;; Auto-enable zen mode in writing modes.
+;; These are added via add-hook rather than use-package :hook because
+;; AUCTeX's LaTeX-mode is a derived mode that receives arguments during
+;; activation, which causes :hook to fail with "wrong number of arguments".
+;; Wrapping in a lambda avoids that entirely.
+(dolist (hook '(LaTeX-mode-hook
+                latex-mode-hook
+                typst-mode-hook))
+  (add-hook hook (lambda () (my/zen-mode))))
 #+END_SRC
 
 * Text Wrapping / Word-Processor Behavior
@@ -342,6 +369,10 @@ a single restart will sort it out.
   (interactive)
   (let ((org-file (expand-file-name "config.org" user-emacs-directory))
         (el-file  (expand-file-name "config.el"  user-emacs-directory)))
+    ;; Delete the existing config.el before tangling so stale blocks from
+    ;; previous versions of the config are never silently carried forward.
+    (when (file-exists-p el-file)
+      (delete-file el-file))
     (org-babel-tangle-file org-file el-file "emacs-lisp")
     (load-file el-file)
     (message "Config reloaded successfully.")))
@@ -530,6 +561,275 @@ renders as invisible padding rather than a visible grey bar. ~:box nil~ and
 #+END_SRC
 * Language Support: LSP, Typst, LaTeX, Markdown
 
+** PDF Tools
+
+~pdf-tools~ renders PDFs natively inside an Emacs buffer using a compiled
+server process (~epdfinfo~). It is significantly sharper and more responsive
+than the built-in ~doc-view~, which rasterises pages to PNGs.
+
+On first install, run ~M-x pdf-tools-install~ once to compile the server
+binary. Most distros need ~libpoppler-glib-dev~ and ~libpoppler-private-dev~
+(Debian/Ubuntu) or ~poppler-glib~ (Arch/macOS Homebrew) for the build to
+succeed.
+
+#+BEGIN_SRC emacs-lisp
+(use-package pdf-tools
+  :magic ("%PDF" . pdf-view-mode)  ;; open any PDF in pdf-view-mode automatically
+  :config
+  (pdf-tools-install :no-query))   ;; compile epdfinfo silently; no interactive prompt
+#+END_SRC
+
+** Org → PDF Live Preview
+
+This implements a side-by-side Org + PDF workflow:
+
+- ~my/org-pdf-preview-open~ splits the frame, exports the current org buffer
+  to PDF via LaTeX, and opens the result in ~pdf-view-mode~ on the right.
+- ~my/org-pdf-preview-update~ re-exports on every save and calls
+  ~pdf-view-revert-buffer~ to refresh the displayed page. The revert is
+  deferred with ~run-with-timer~ so it fires after LaTeX has finished writing
+  the file rather than immediately when the save hook fires.
+- ~my/org-pdf-preview-stop~ disables the auto-export hook and closes the PDF
+  window, returning you to a single-pane editing view.
+- The hook is buffer-local (~t~ as the LOCAL argument to ~add-hook~) so it only
+  fires for the one org file that started the preview, not every org file you
+  open.
+
+The LaTeX export uses ~lualatex~ run three times (for cross-references and
+tables of contents). If you prefer ~pdflatex~ or ~xelatex~, change the engine
+string in ~org-latex-pdf-process~ below.
+
+*Keybinds added:*
+- ~C-c p o~ — open the live preview split
+- ~C-c p s~ — stop the preview and close the PDF window
+
+#+BEGIN_SRC emacs-lisp
+;; Use lualatex for the org → PDF export pipeline.
+;; Three passes resolves cross-references and ToC entries.
+;; Swap "lualatex" for "pdflatex" or "xelatex" if preferred.
+(setq org-latex-pdf-process
+      '("lualatex -interaction nonstopmode -output-directory %o %f"
+        "lualatex -interaction nonstopmode -output-directory %o %f"
+        "lualatex -interaction nonstopmode -output-directory %o %f"))
+
+(defvar-local my/org-pdf-preview-active nil
+  "Non-nil when the live PDF preview is running for this org buffer.")
+
+(defun my/org-pdf-preview--pdf-path ()
+  "Return the expected PDF output path for the current org buffer."
+  (concat (file-name-sans-extension (buffer-file-name)) ".pdf"))
+
+(defun my/org-pdf-preview-update ()
+  "Re-export the current org buffer to PDF and refresh the pdf-tools window.
+Intended to run on `after-save-hook' (buffer-local)."
+  (when my/org-pdf-preview-active
+    (let ((pdf-path (my/org-pdf-preview--pdf-path))
+          (org-buf  (current-buffer)))
+      ;; Export asynchronously so the save doesn't block the UI.
+      ;; `org-latex-export-to-pdf' is synchronous, so we wrap it in a timer
+      ;; to yield control back to Emacs first, then compile in the background.
+      (run-with-timer
+       0 nil
+       (lambda ()
+         (with-current-buffer org-buf
+           (org-latex-export-to-pdf nil nil nil nil nil))
+         ;; After compilation, revert the PDF buffer if it is visible.
+         (run-with-timer
+          0.5 nil
+          (lambda ()
+            (let ((pdf-buf (find-buffer-visiting pdf-path)))
+              (when (and pdf-buf (buffer-live-p pdf-buf))
+                (with-current-buffer pdf-buf
+                  (pdf-view-revert-buffer nil t)))))))))))
+
+(defun my/org-pdf-preview-open ()
+  "Export the current org buffer to PDF and open it in a right-hand split.
+Enables auto-refresh on save for this buffer."
+  (interactive)
+  (unless (buffer-file-name)
+    (user-error "Buffer must be visiting a file before opening PDF preview"))
+  (unless (eq major-mode 'org-mode)
+    (user-error "PDF preview is only available in org-mode buffers"))
+  ;; Initial export so there is something to display immediately.
+  (message "Exporting to PDF…")
+  (org-latex-export-to-pdf nil nil nil nil nil)
+  (let ((pdf-path (my/org-pdf-preview--pdf-path)))
+    (unless (file-exists-p pdf-path)
+      (user-error "PDF export failed — check *Messages* for LaTeX errors"))
+    ;; Open PDF in a right-hand split, reusing the window if already open.
+    (let ((pdf-win (get-buffer-window (find-buffer-visiting pdf-path))))
+      (if pdf-win
+          (select-window pdf-win)
+        (select-window (split-window-right))
+        (find-file pdf-path)))
+    ;; Return focus to the org window on the left.
+    (other-window 1))
+  ;; Arm the buffer-local save hook.
+  (setq my/org-pdf-preview-active t)
+  (add-hook 'after-save-hook #'my/org-pdf-preview-update nil t)
+  (message "PDF preview active — saving will auto-refresh."))
+
+(defun my/org-pdf-preview-stop ()
+  "Disable the live PDF preview and close the PDF window."
+  (interactive)
+  (setq my/org-pdf-preview-active nil)
+  (remove-hook 'after-save-hook #'my/org-pdf-preview-update t)
+  (let ((pdf-path (my/org-pdf-preview--pdf-path)))
+    (let ((pdf-win (get-buffer-window (find-buffer-visiting pdf-path))))
+      (when pdf-win
+        (delete-window pdf-win))))
+  (message "PDF preview stopped."))
+
+(with-eval-after-load 'org
+  (define-key org-mode-map (kbd "C-c p o") #'my/org-pdf-preview-open)
+  (define-key org-mode-map (kbd "C-c p s") #'my/org-pdf-preview-stop))
+#+END_SRC
+
+** Typst Major Mode
+
+~typst-mode~ provides syntax highlighting and indentation for ~.typ~ files
+using standard regex-based font-lock. It has zero OS dependencies — no
+tree-sitter grammar, no compiler, no binary download.
+
+It is not on MELPA, so it is installed via ~straight.el~ directly from its
+GitHub repository. This is one of straight's core strengths over ~package.el~
+— any Git-hosted package works without needing a separate registry entry.
+
+#+BEGIN_SRC emacs-lisp
+(use-package typst-mode
+  :straight (:host github :repo "Ziqi-Yang/typst-mode.el")
+  :mode ("\\.typ\\'" . typst-mode))
+#+END_SRC
+
+** Typst → PDF Live Preview
+
+The architecture here differs from the Org/LaTeX preview because Typst has
+~typst watch~ built into its CLI: a single long-running background process that
+recompiles the document automatically on every file change, typically in under
+a second. There is no need to hook into ~after-save-hook~ and trigger a
+compilation manually — Typst handles that side entirely.
+
+What Emacs does:
+- ~my/typst-preview-open~ spawns ~typst watch <file>~ as a background process,
+  splits the frame, and opens the PDF on the right.
+- A buffer-local idle timer polls the PDF file's modification time once per
+  second. When it detects the file has been updated on disk (meaning Typst
+  finished a compile), it calls ~pdf-view-revert-buffer~ to refresh the view.
+- ~my/typst-preview-stop~ kills the ~typst watch~ process, cancels the timer,
+  and closes the PDF window.
+
+The only OS dependency is the ~typst~ binary on ~$PATH~. On NixOS this is
+~programs.typst.enable = true;~ or ~environment.systemPackages = [ pkgs.typst ];~
+in your system config. On any other machine it is a single binary with no
+runtime dependencies.
+
+*Keybinds (active only inside ~typst-ts-mode~ buffers):*
+- ~C-c p o~ — open the live preview split
+- ~C-c p s~ — stop the preview and close the PDF window
+
+#+BEGIN_SRC emacs-lisp
+(defvar-local my/typst-watch-process nil
+  "The running `typst watch' process for this buffer, or nil.")
+
+(defvar-local my/typst-poll-timer nil
+  "The idle timer that polls the PDF modification time for this buffer.")
+
+(defvar-local my/typst-pdf-last-mtime nil
+  "Modification time of the PDF the last time the poll timer ran.")
+
+(defun my/typst-preview--pdf-path ()
+  "Return the expected PDF output path for the current Typst buffer."
+  (concat (file-name-sans-extension (buffer-file-name)) ".pdf"))
+
+(defun my/typst-preview--poll (org-buf pdf-path)
+  "Check if the PDF at PDF-PATH has been updated and refresh if so.
+Intended to be called by the buffer-local poll timer."
+  (when (and (buffer-live-p org-buf)
+             (file-exists-p pdf-path))
+    (let ((mtime (file-attribute-modification-time
+                  (file-attributes pdf-path))))
+      (with-current-buffer org-buf
+        (when (not (equal mtime my/typst-pdf-last-mtime))
+          (setq my/typst-pdf-last-mtime mtime)
+          ;; Revert the PDF buffer if it is visible in any window.
+          (let ((pdf-buf (find-buffer-visiting pdf-path)))
+            (when (and pdf-buf (buffer-live-p pdf-buf))
+              (with-current-buffer pdf-buf
+                (pdf-view-revert-buffer nil t)))))))))
+
+(defun my/typst-preview-open ()
+  "Start `typst watch', open the output PDF in a right-hand split,
+and begin polling for updates. Focus remains on the Typst source buffer."
+  (interactive)
+  (unless (buffer-file-name)
+    (user-error "Buffer must be visiting a file before opening Typst preview"))
+  (unless (eq major-mode 'typst-mode)
+    (user-error "Typst preview is only available in typst-mode buffers"))
+  (unless (executable-find "typst")
+    (user-error "typst binary not found on $PATH — install Typst first"))
+  ;; Kill any existing watch process for this buffer before starting a new one.
+  (my/typst-preview-stop)
+  (let* ((typ-file  (buffer-file-name))
+         (pdf-path  (my/typst-preview--pdf-path))
+         (src-buf   (current-buffer))
+         (proc-name (format "typst-watch:%s" (buffer-name)))
+         (proc-buf  (format " *typst-watch:%s*" (buffer-name))))
+    ;; Spawn `typst watch' as a background process. Output goes to a hidden
+    ;; buffer so compilation errors are accessible if needed.
+    (setq my/typst-watch-process
+          (start-process proc-name proc-buf "typst" "watch" typ-file))
+    (set-process-query-on-exit-flag my/typst-watch-process nil)
+    ;; Wait briefly for the initial compile before opening the PDF.
+    (message "Waiting for initial Typst compile…")
+    (sleep-for 1.5)
+    (unless (file-exists-p pdf-path)
+      ;; If the PDF still doesn't exist, wait a little longer.
+      (sleep-for 1.5))
+    (unless (file-exists-p pdf-path)
+      (my/typst-preview-stop)
+      (user-error "Typst compile failed — check buffer %s for errors" proc-buf))
+    ;; Open the PDF in a right-hand split.
+    (let ((existing-pdf-win (get-buffer-window (find-buffer-visiting pdf-path))))
+      (if existing-pdf-win
+          (select-window existing-pdf-win)
+        (select-window (split-window-right))
+        (find-file pdf-path)))
+    ;; Return focus to the source buffer on the left.
+    (select-window (get-buffer-window src-buf))
+    ;; Start the poll timer: check for PDF changes every second.
+    (setq my/typst-pdf-last-mtime
+          (file-attribute-modification-time (file-attributes pdf-path)))
+    (setq my/typst-poll-timer
+          (run-with-timer 1 1
+                          #'my/typst-preview--poll src-buf pdf-path))
+    (message "Typst preview active — edit and save to see live updates.")))
+
+(defun my/typst-preview-stop ()
+  "Stop `typst watch', cancel the poll timer, and close the PDF window."
+  (interactive)
+  ;; Cancel the poll timer.
+  (when (timerp my/typst-poll-timer)
+    (cancel-timer my/typst-poll-timer)
+    (setq my/typst-poll-timer nil))
+  ;; Kill the typst watch process.
+  (when (process-live-p my/typst-watch-process)
+    (kill-process my/typst-watch-process)
+    (setq my/typst-watch-process nil))
+  ;; Close the PDF window if visible.
+  (let ((pdf-path (and (buffer-file-name)
+                       (my/typst-preview--pdf-path))))
+    (when pdf-path
+      (let ((pdf-win (get-buffer-window (find-buffer-visiting pdf-path))))
+        (when pdf-win
+          (delete-window pdf-win)))))
+  (message "Typst preview stopped."))
+
+;; Bind within typst-mode-map so C-c p o/s only exist in Typst buffers
+;; and mirror the same mnemonic as the org preview keybinds.
+(with-eval-after-load 'typst-mode
+  (define-key typst-mode-map (kbd "C-c p o") #'my/typst-preview-open)
+  (define-key typst-mode-map (kbd "C-c p s") #'my/typst-preview-stop))
+#+END_SRC
 
 * Silence
 
