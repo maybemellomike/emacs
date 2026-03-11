@@ -1,5 +1,6 @@
 #+TITLE: README
 #+AUTHOR: liam
+#+DESCRIPTION: Givin' this whirwind a go.
 
 * Here We Go, Emacs
 
@@ -11,4 +12,8 @@ Being on NixOS getting Doom was more hassle than I was thinking it was worth and
 
 ** Starting from Scratch
 
-This is what everyone says to do at some point so here we are. This is the from scratch configuration of total non understanding. It appears t o
+This is what everyone says to do at some point so here we are. This is the from scratch configuration of total non understanding. It appears to be semi working. What is confusing about Emacs I think is it isn't really clear how its to be used but what I am gathering slowly is its essentially a blank slate meant to be essentially built to make whatever you want your workflow to be.
+
+[[./scrot/light.png]]
+
+[[./scrot/dark.png]]
