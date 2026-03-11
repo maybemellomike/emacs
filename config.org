@@ -1,10 +1,15 @@
-#+TITLE: My Emacs Configuration
++TITLE: My Emacs Configuration
 #+AUTHOR: Liam
 #+DESCRIPTION: No, I don't know too much whats happening here but hey something's at least happening
-
 #+PROPERTY: header-args :tangle config.el
 
-* Bootstrap: straight.el + use-package
+* Introduction
+
+Here we go, gettin' wild with Emacs. I'm not even entirely sure what sort of things I'm supposed to look to build /into/ this configuration let alone how to do so, but we are giving it a go nevertheless.
+
+* Define Straight.el and use-package
+
+Hoping to keep this as portable as possible I was reading that using straight.el was a pretty clean way to do so.
 
 ~straight.el~ is a declarative, reproducible package manager that clones
 packages directly from their source repositories (Git) rather than downloading
@@ -60,6 +65,9 @@ exists.
 
 * Relative Line Numbers
 
+I *do not for the life of me understand* what is going on here. I have taken now from so many configurations I just can't come to believe it's this complicated. I'm having some strange issues with this indenting text in strange spots because it appears the numbers are center aligned so when the go from one to two digits it pushes the text around as the cursor moves. Oh sorry, when /the point/ moves, around the file.
+
+
 The keys to a stable gutter width are:
 1. Set ~display-line-numbers-width~ globally as a default BEFORE the mode enables.
 2. Set ~display-line-numbers-right-justify~ to ~t~ so numbers are right-aligned
@@ -96,6 +104,9 @@ The keys to a stable gutter width are:
 #+END_SRC
 
 * Evil
+
+I mean duh
+
 #+BEGIN_SRC emacs-lisp
 (use-package evil
   :init
@@ -117,7 +128,7 @@ The keys to a stable gutter width are:
 
 * Telescope-like Fuzzy Finder
 
-~vertico~ provides the vertical completion UI, ~orderless~ enables fuzzy/space-separated
+Thanks Prot ~vertico~ provides the vertical completion UI, ~orderless~ enables fuzzy/space-separated
 matching, ~marginalia~ adds annotations, and ~consult~ provides the search commands.
 
 #+BEGIN_SRC emacs-lisp
@@ -157,6 +168,8 @@ matching, ~marginalia~ adds annotations, and ~consult~ provides the search comma
 #+END_SRC
 
 ** Theme Toggle
+
+Wish I could find a clean way to do this computer wide but hey, maybe Emacs will become my computer so this works. 
 
 Toggles between the dark theme (~doom-monokai-machine~) and the light theme
 (~ef-cyprus~). ~C-c T~ is used because ~C-c t~ is already bound to the eshell toggle.
@@ -226,6 +239,8 @@ Called after every theme switch so blocks never inherit stale colours."
 
 ** Frame Transparency
 
+This isn't working even though I'm on Wayland and transparency in everything else I have installed works without a hitch.
+
 Sets the background to 90% opacity (10% transparent) using ~alpha-background~,
 which is available in Emacs 29+. Unlike the older ~alpha~ parameter which fades
 the entire frame including text, ~alpha-background~ leaves all text and UI
@@ -280,46 +295,48 @@ Other coloured elements:
 - ~org-document-info~ — muted grey for #+AUTHOR, #+DATE etc.
 
 #+BEGIN_SRC emacs-lisp
-(use-package org
-  :straight (:type built-in)  ;; tell straight to use Emacs' built-in org rather than
-                               ;; cloning from MELPA, avoiding version conflicts
-  :hook
-  ((org-mode . variable-pitch-mode)
-   (org-mode . visual-line-mode))
-  :custom-face
-  ;; Headings — height + weight carried over, foreground colours added
-  (org-level-1 ((t (:height 1.4 :weight bold  :foreground "#F92672"))))
-  (org-level-2 ((t (:height 1.3 :weight bold  :foreground "#66D9EF"))))
-  (org-level-3 ((t (:height 1.2 :weight bold  :foreground "#A6E22E"))))
-  (org-level-4 ((t (:height 1.1 :weight bold  :foreground "#E6DB74"))))
-  (org-level-5 ((t (:height 1.05             :foreground "#FD971F"))))
-  (org-level-6 ((t (:height 1.02             :foreground "#AE81FF"))))
-  (org-level-7 ((t (:height 1.0              :foreground "#75715E"))))
-  (org-level-8 ((t (:height 1.0              :foreground "#75715E"))))
-  ;; Code blocks — background is intentionally unset here so it inherits from
-  ;; the active theme. my/apply-org-theme-faces re-applies theme-appropriate
-  ;; colours whenever the theme is toggled (see Theme Toggle section).
-  (org-block            ((t (:inherit fixed-pitch))))
-  (org-block-begin-line ((t (:inherit fixed-pitch))))
-  (org-block-end-line   ((t (:inherit fixed-pitch))))
-  (org-code             ((t (:inherit fixed-pitch))))
-  ;; Todo keywords
-  (org-todo ((t (:foreground "#F92672" :weight bold))))
-  (org-done ((t (:foreground "#A6E22E" :weight bold))))
-  ;; Timestamps, tags, links
-  (org-date ((t (:foreground "#66D9EF" :underline t))))
-  (org-tag  ((t (:foreground "#FD971F" :weight normal))))
-  (org-link ((t (:foreground "#66D9EF" :underline t))))
-  ;; Definition list terms
-  (org-list-dt ((t (:foreground "#E6DB74" :weight bold))))
-  ;; Document title and info lines (#+TITLE, #+AUTHOR etc.)
-  (org-document-title ((t (:height 1.5 :weight bold :foreground "#F8F8F2"))))
-  (org-document-info  ((t (:foreground "#75715E")))))
+    (use-package org
+      :straight (:type built-in)  ;; tell straight to use Emacs' built-in org rather than
+                                   ;; cloning from MELPA, avoiding version conflicts
+      :hook
+      ((org-mode . variable-pitch-mode)
+       (org-mode . visual-line-mode))
+      :custom-face
+      ;; Headings — height + weight carried over, foreground colours added
+      (org-level-1 ((t (:height 1.4 :weight bold  :foreground "#F92672"))))
+      (org-level-2 ((t (:height 1.3 :weight bold  :foreground "#66D9EF"))))
+      (org-level-3 ((t (:height 1.2 :weight bold  :foreground "#A6E22E"))))
+      (org-level-4 ((t (:height 1.1 :weight bold  :foreground "#E6DB74"))))
+      (org-level-5 ((t (:height 1.05             :foreground "#FD971F"))))
+      (org-level-6 ((t (:height 1.02             :foreground "#AE81FF"))))
+      (org-level-7 ((t (:height 1.0              :foreground "#75715E"))))
+      (org-level-8 ((t (:height 1.0              :foreground "#75715E"))))
+      ;; Code blocks — background is intentionally unset here so it inherits from
+      ;; the active theme. my/apply-org-theme-faces re-applies theme-appropriate
+      ;; colours whenever the theme is toggled (see Theme Toggle section).
+      (org-block            ((t (:inherit fixed-pitch))))
+      (org-block-begin-line ((t (:inherit fixed-pitch))))
+      (org-block-end-line   ((t (:inherit fixed-pitch))))
+      (org-code             ((t (:inherit fixed-pitch))))
+      ;; Todo keywords
+      (org-todo ((t (:foreground "#F92672" :weight bold))))
+      (org-done ((t (:foreground "#A6E22E" :weight bold))))
+      ;; Timestamps, tags, links
+      (org-date ((t (:foreground "#66D9EF" :underline t))))
+      (org-tag  ((t (:foreground "#FD971F" :weight normal))))
+      (org-link ((t (:foreground "#66D9EF" :underline t))))
+      ;; Definition list terms
+      (org-list-dt ((t (:foreground "#E6DB74" :weight bold))))
+      ;; Document title and info lines (#+TITLE, #+AUTHOR etc.)
+      (org-document-title ((t (:height 1.5 :weight bold :foreground "#F8F8F2"))))
+      (org-document-info  ((t (:foreground "#75715E")))))
 
-(use-package org-modern
-  :after org
-  :hook
-  (org-mode . org-modern-mode))
+    (use-package org-modern
+      :after org
+      :hook
+      (org-mode . org-modern-mode))
+  (require 'ox-md nil t)
+
 #+END_SRC
 
 * Zen Mode (olivetti — no fullscreen)
@@ -336,7 +353,7 @@ Other coloured elements:
           (display-line-numbers-mode 1))
       (progn
         (olivetti-mode 1)
-        (olivetti-set-width 88)
+        (olivetti-set-width 0.8)
         (display-line-numbers-mode 0))))
   :bind
   ("C-c z" . my/zen-mode))
@@ -482,6 +499,10 @@ built into Emacs 27+.
 
 ** Terminal (eshell in a bottom split)
 
+I think there is a cleaner way maybe with some plugins or something to have like a quick pop up shell. On the hunt for a better solution.
+
+I am also always doing a lot of repetive CD'ing around so maybe there is a better just use other Emacs ways of doing things to avoid this. 
+
 Opens an eshell in a horizontal split occupying the bottom third of the current
 frame. If an eshell buffer is already open it reuses it rather than opening a
 second one. Pressing ~C-c t~ again from any window closes the eshell split and
@@ -600,10 +621,10 @@ binary. Most distros need ~libpoppler-glib-dev~ and ~libpoppler-private-dev~
 succeed.
 
 #+BEGIN_SRC emacs-lisp
-(use-package pdf-tools
-  :magic ("%PDF" . pdf-view-mode)  ;; open any PDF in pdf-view-mode automatically
-  :config
-  (pdf-tools-install :no-query))   ;; compile epdfinfo silently; no interactive prompt
+;;(use-package pdf-tools
+  ;;:magic ("%PDF" . pdf-view-mode)  ;; open any PDF in pdf-view-mode automatically
+  ;;:config
+  ;;(pdf-tools-install :no-query))   ;; compile epdfinfo silently; no interactive prompt
 #+END_SRC
 
 
