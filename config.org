@@ -1008,6 +1008,129 @@ touched until you explicitly save."
   (define-key typst-mode-map (kbd "C-c C-x p") #'my/typst-preview-open)
   (define-key typst-mode-map (kbd "C-c C-x s") #'my/typst-preview-stop))
 
+** Org → Typst Live Preview
+
+~ox-typst~ is an Org export backend that targets Typst (~.typ~) files. It is not
+on MELPA so it is installed via ~straight.el~ directly from its GitHub repository.
+
+The workflow mirrors the existing org→LaTeX→PDF preview: on every save the org
+buffer is exported to a ~.typ~ file in the same directory, ~typst watch~ picks up
+the change and recompiles to PDF, and the pdf-tools buffer reverts automatically.
+The ~.typ~ file is a build artefact — the ~.org~ file is the source of truth.
+
+~C-c p t~ opens the preview, ~C-c p T~ stops it.
+
+#+BEGIN_SRC emacs-lisp
+  (use-package ox-typst
+    :straight (:host github :repo "jmpunkt/ox-typst")
+    :demand t
+    :after ox)
+
+  (defvar-local my/org-typst-preview-active nil
+    "Non-nil when the org→typst live preview is running for this buffer.")
+
+  (defvar-local my/org-typst-preview--typ-path nil
+    "Path to the exported .typ file for this org buffer.")
+
+  (defvar-local my/org-typst-preview--pdf-path nil
+    "Path to the compiled .pdf file for this org buffer.")
+
+  (defvar-local my/org-typst-preview--process nil
+    "The typst watch background process for this org buffer.")
+
+  (defun my/org-typst-preview--do-revert (pdf-path)
+    "Revert the pdf-tools buffer visiting PDF-PATH if it exists."
+    (let ((pdf-buf (find-buffer-visiting pdf-path)))
+      (when (and pdf-buf (buffer-live-p pdf-buf))
+        (with-current-buffer pdf-buf
+          (pdf-view-revert-buffer nil t)))))
+
+  (defun my/org-typst-preview-update ()
+    "Re-export the current org buffer to Typst and refresh the pdf-tools window.
+  Runs on `after-save-hook' (buffer-local)."
+    (when my/org-typst-preview-active
+      (org-export-to-file 'typst my/org-typst-preview--typ-path)
+      (run-with-timer 1.0 nil
+                      #'my/org-typst-preview--do-revert
+                      my/org-typst-preview--pdf-path)))
+
+  (defun my/org-typst-preview--open-split (org-buf pdf-path proc-name)
+    "Open the PDF split for ORG-BUF once the initial compile has finished."
+    (if (not (file-exists-p pdf-path))
+        (message "Typst compile failed — check *%s* for errors" proc-name)
+      (let* ((org-win (get-buffer-window org-buf))
+             (pdf-buf (or (find-buffer-visiting pdf-path)
+                          (let ((b (find-file-noselect pdf-path)))
+                            (with-current-buffer b
+                              (pdf-view-mode)
+                              (display-line-numbers-mode 0))
+                            b)))
+             (pdf-win (get-buffer-window pdf-buf)))
+        (if pdf-win
+            (with-current-buffer pdf-buf
+              (pdf-view-revert-buffer nil t))
+          (let ((new-win (split-window org-win nil 'right)))
+            (set-window-buffer new-win pdf-buf)))
+        (select-window (get-buffer-window org-buf))
+        (message "Org→Typst preview active — saving will auto-refresh."))))
+
+  (defun my/org-typst-preview-open ()
+    "Export the current org buffer to Typst, start typst watch, and open a PDF split."
+    (interactive)
+    (require 'ox-typst)
+    (unless (buffer-file-name (current-buffer))
+      (user-error "Buffer must be visiting a file before opening preview"))
+    (unless (eq major-mode 'org-mode)
+      (user-error "Org→Typst preview is only available in org-mode buffers"))
+    (unless (executable-find "typst")
+      (user-error "typst not found on PATH — install it or add it to your NixOS config"))
+    (let* ((org-buf   (current-buffer))
+           (base      (file-name-sans-extension (buffer-file-name (current-buffer))))
+           (typ-path  (concat base ".typ"))
+           (pdf-path  (concat base ".pdf"))
+           (proc-name (format "org-typst-watch:%s" (buffer-name))))
+      (message "Exporting org→typst…")
+      (org-export-to-file 'typst typ-path)
+      (unless (process-live-p my/org-typst-preview--process)
+        (let* ((default-directory (file-name-directory (buffer-file-name (current-buffer))))
+               (proc (start-process proc-name
+                                    (format " *%s*" proc-name)
+                                    "typst" "watch" typ-path pdf-path)))
+          (set-process-query-on-exit-flag proc nil)
+          (setq my/org-typst-preview--process proc)))
+      (setq my/org-typst-preview--typ-path typ-path)
+      (setq my/org-typst-preview--pdf-path pdf-path)
+      (setq my/org-typst-preview-active t)
+      (add-hook 'after-save-hook #'my/org-typst-preview-update nil t)
+      (message "Starting Typst watch — opening preview…")
+      (run-with-timer 1.5 nil
+                      #'my/org-typst-preview--open-split
+                      org-buf pdf-path proc-name)))
+
+  (defun my/org-typst-preview-stop ()
+    "Stop the org→Typst live preview and close the PDF window."
+    (interactive)
+    (setq my/org-typst-preview-active nil)
+    (remove-hook 'after-save-hook #'my/org-typst-preview-update t)
+    (when (process-live-p my/org-typst-preview--process)
+      (kill-process my/org-typst-preview--process)
+      (setq my/org-typst-preview--process nil))
+    (when my/org-typst-preview--pdf-path
+      (let ((pdf-win (get-buffer-window
+                      (find-buffer-visiting my/org-typst-preview--pdf-path))))
+        (when pdf-win
+          (delete-window pdf-win))))
+    (message "Org→Typst preview stopped."))
+
+  (with-eval-after-load 'org
+    (define-key org-mode-map (kbd "C-c p t") #'my/org-typst-preview-open)
+    (define-key org-mode-map (kbd "C-c p T") #'my/org-typst-preview-stop))
+
+(with-eval-after-load 'ox-typst
+  (setq org-typst-default-header ""))
+#+END_SRC
+#+END_SRC
+
 * Silence
 
 Disables the audible bell and the visual flash fallback that Emacs uses when the
