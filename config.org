@@ -58,6 +58,32 @@ exists.
 (scroll-bar-mode -1)
 #+END_SRC
 
+** Mode Line (doom-modeline)
+
+~doom-modeline~ is a minimal, fast mode-line built on ~nerd-icons~. It shows
+the buffer name, major mode, Evil state, git branch, and diagnostics in a
+clean single line.
+
+~doom-modeline-icon~ is set to ~nil~ here since we are not using glyphs or
+powerline separators — this keeps it readable on any font without needing
+a patched Nerd Font active on the mode-line specifically.
+
+#+BEGIN_SRC emacs-lisp
+(use-package doom-modeline
+  :init
+  (doom-modeline-mode 1)
+  :custom
+  (doom-modeline-icon nil)              ;; no icons/glyphs, clean text only
+  (doom-modeline-major-mode-icon nil)   ;; no major mode icon
+  (doom-modeline-height 25)             ;; slightly taller than default
+  (doom-modeline-bar-width 3)           ;; left accent bar width
+  (doom-modeline-buffer-file-name-style 'truncate-upto-project) ;; short but informative path
+  (doom-modeline-minor-modes nil)       ;; hide minor mode clutter
+  (doom-modeline-enable-word-count nil)
+  (doom-modeline-buffer-encoding nil))  ;; hide UTF-8 noise
+#+END_SRC
+
+
 * Relative Line Numbers
 
 The keys to a stable gutter width are:
