@@ -64,133 +64,16 @@ Some clean up or behavior things which are more or less built in settings I just
   (tool-bar-mode -1)
   (menu-bar-mode -1)
   (scroll-bar-mode -1)
-;; scroll one line at a time rather than jumping half a page
-(setq scroll-step 1)
-(setq scroll-conservatively 101)  ;; any value > 100 means "never jump"
-;; keep 5 lines visible above/below the cursor at all times (scrolloff)
-(setq scroll-margin 5)
+  (setq scroll-step 1
+        scroll-conservatively 101
+        scroll-margin 5
+        auto-window-vscroll nil
+        fast-but-imprecise-scrolling t
+        scroll-preserve-screen-position t)
+  (pixel-scroll-precision-mode 1)
 #+END_SRC
 
-** Mode Line (doom-modeline)
-
-~doom-modeline~ is a minimal, fast mode-line built on ~nerd-icons~. It shows
-the buffer name, major mode, Evil state, git branch, and diagnostics in a
-clean single line.
-
-~doom-modeline-icon~ is set to ~nil~ here since we are not using glyphs or
-powerline separators — this keeps it readable on any font without needing
-a patched Nerd Font active on the mode-line specifically.
-
-#+BEGIN_SRC emacs-lisp
-(use-package doom-modeline
-  :init
-  (doom-modeline-mode 1)
-  :custom
-  (doom-modeline-icon nil)              ;; no icons/glyphs, clean text only
-  (doom-modeline-major-mode-icon t)   ;; no major mode icon
-  (doom-modeline-time-icon t)   ;; no major mode icon
-  (doom-modeline-height 23)             ;; slightly taller than default
-  (doom-modeline-bar-width 5)           ;; left accent bar width
-  (doom-modeline-buffer-file-name-style 'truncate-upto-project) ;; short but informative path
-  (doom-modeline-minor-modes 1)       ;; hide minor mode clutter
-  (doom-modeline-enable-word-count 1)
-  (doom-modeline-buffer-encoding nil))  ;; hide UTF-8 noise
-#+END_SRC
-
-** Syntax Highlighting
-Non LSP based syntax highlighting for the main languages on my machine .
-
-**** Nix Syntax 
-
-~nix-mode~ provides font-lock syntax highlighting for ~.nix~ files with no
-LSP or language server required. Keywords, strings, builtins, interpolation,
-and comments all get distinct colours drawn from the active theme.
-
-#+BEGIN_SRC emacs-lisp
-(use-package nix-mode
-  :mode "\\.nix\\'")
-#+END_SRC
-
-**** Markdown 
-#+BEGIN_SRC emacs-lisp
-(use-package markdown-mode
-  :mode ("\\.md\\'" "\\.markdown\\'"))
-#+END_SRC
-
-* Relative Line Numbers
-
-The keys to a stable gutter width are:
-1. Set ~display-line-numbers-width~ globally as a default BEFORE the mode enables.
-2. Set ~display-line-numbers-right-justify~ to ~t~ so numbers are right-aligned
-   within the fixed-width gutter. Without this, numbers are left-aligned and the
-   text body shifts sideways whenever the relative number gains or loses a digit
-   as the cursor moves.
-3. In org-mode, re-assert the width AFTER ~variable-pitch-mode~ fires, because
-   proportional fonts cause Emacs to recalculate gutter metrics. We do this by
-   appending to the hook (the ~t~ argument to ~add-hook~) so it runs last.
-
-#+BEGIN_SRC emacs-lisp
-  (setq-default display-line-numbers-type 'relative)
-  (setq-default display-line-numbers-width 4)  ;; 4 = 3 digit columns + 1 padding so
-                                                ;; two-digit numbers never reflow the gutter
-  (setq-default display-line-numbers-right-justify t) ;; right-align numbers so the text
-                                                       ;; body stays anchored as digits change
-  (global-display-line-numbers-mode t)
-
-  (dolist (mode '(term-mode-hook
-                  shell-mode-hook
-                  eshell-mode-hook
-                  vterm-mode-hook
-                  treemacs-mode-hook
-                  minibuffer-setup-hook))
-    (add-hook mode (lambda () (display-line-numbers-mode 0))))
-
-  ;; Re-assert fixed gutter width in org-mode AFTER variable-pitch-mode fires.
-  ;; The trailing `t` appends this hook so it runs after all others on the hook list.
-  (add-hook 'org-mode-hook
-            (lambda ()
-              (setq-local display-line-numbers-width 4)
-              (setq-local display-line-numbers-width-start nil))
-            t)
-(custom-set-faces
- '(line-number               ((t (:inherit fixed-pitch))))
- '(line-number-current-line  ((t (:inherit fixed-pitch)))))
-#+END_SRC
-
-* Evil
-#+BEGIN_SRC emacs-lisp
-(use-package evil
-  :init
-  (setq evil-want-integration t
-        evil-want-keybinding nil)  ;; required when using evil-collection
-  :config
-  (evil-mode 1))
-
-(use-package evil-collection
-  :after evil
-  :config
-  (evil-collection-init))
-#+END_SRC
-
-* Corfu Completion
-
-Non LSP based completion that works in all buffers. Popular package that leverages built in things Emacs is already doing.  
-
-#+BEGIN_SRC emacs-lisp
-  (use-package corfu
-    :custom
-    (corfu-auto t)           ;; show popup automatically without pressing TAB
-    (corfu-auto-delay 0.1)   ;; seconds before popup appears
-    (corfu-auto-prefix 2)    ;; minimum characters before popup triggers
-    (corfu-cycle t)          ;; wrap around at top/bottom of candidate list
-    (corfu-quit-no-match t)  ;; hide popup if nothing matches
-    :config
-    (global-corfu-mode 1))
- (with-eval-after-load 'corfu
-  (define-key corfu-map (kbd "ESC") #'corfu-quit))
-#+END_SRC
-
-* Small Changes for Big Effect
+** Small Changes for Big Effect
 
 Somehow there isn't undo from the get go? Or there is but it is very 1970s in that it super tries to conserve ram or something and therefore isn't too practical. Next up is WhichKey which well, shows you the keys available for the next press. Very handy due to the sheer volume of things you /can/ press in Emacs it seems.
 
@@ -200,10 +83,10 @@ Somehow there isn't undo from the get go? Or there is but it is very 1970s in th
     :config
     (which-key-mode 1)
     :custom
-    (which-key-idle-delay 0.3))
+    (which-key-idle-delay 0.5))
 #+END_SRC
 
-* Telescope-like Fuzzy Finder
+** Telescope-like Fuzzy Finder
 
 ~vertico~ provides the vertical completion UI, ~orderless~ enables fuzzy/space-separated
 matching, ~marginalia~ adds annotations, and ~consult~ provides the search commands.
@@ -234,7 +117,7 @@ matching, ~marginalia~ adds annotations, and ~consult~ provides the search comma
   (recentf-mode 1))
 #+END_SRC
 
-* Theme
+** Theme
 
 #+BEGIN_SRC emacs-lisp
 (use-package doom-themes
@@ -244,7 +127,7 @@ matching, ~marginalia~ adds annotations, and ~consult~ provides the search comma
   (load-theme 'doom-tomorrow-night t))
 #+END_SRC
 
-** Theme Toggle
+**** Theme Toggle
 
 Toggles between the dark theme (~doom-monokai-machine~) and the light theme
 (~ef-cyprus~). ~C-c T~ is used because ~C-c t~ is already bound to the eshell toggle.
@@ -312,10 +195,132 @@ tinted background on both dark and light themes rather than a jarring mismatch.
   (global-set-key (kbd "C-c T") #'my/toggle-theme)
 #+END_SRC
 
-* Icons
+*** Icons
 #+BEGIN_SRC emacs-lisp
 (use-package nerd-icons)
 #+END_SRC
+** Mode Line (doom-modeline)
+
+~doom-modeline~ is a minimal, fast mode-line built on ~nerd-icons~. It shows
+the buffer name, major mode, Evil state, git branch, and diagnostics in a
+clean single line.
+
+~doom-modeline-icon~ is set to ~nil~ here since we are not using glyphs or
+powerline separators — this keeps it readable on any font without needing
+a patched Nerd Font active on the mode-line specifically.
+
+#+BEGIN_SRC emacs-lisp
+(use-package doom-modeline
+  :init
+  (doom-modeline-mode 1)
+  :custom
+  (doom-modeline-icon nil)              ;; no icons/glyphs, clean text only
+  (doom-modeline-major-mode-icon t)   ;; no major mode icon
+  (doom-modeline-time-icon t)   ;; no major mode icon
+  (doom-modeline-height 26)             ;; slightly taller than default
+  (doom-modeline-bar-width 5)           ;; left accent bar width
+  (doom-modeline-buffer-file-name-style 'truncate-upto-project) ;; short but informative path
+  (doom-modeline-minor-modes 1)       ;; hide minor mode clutter
+  (doom-modeline-enable-word-count 1)
+  (doom-modeline-buffer-encoding nil))  ;; hide UTF-8 noise
+#+END_SRC
+
+** Syntax Highlighting
+Non LSP based syntax highlighting for the main languages on my machine .
+
+**** Nix Syntax 
+
+~nix-mode~ provides font-lock syntax highlighting for ~.nix~ files with no
+LSP or language server required. Keywords, strings, builtins, interpolation,
+and comments all get distinct colours drawn from the active theme.
+
+#+BEGIN_SRC emacs-lisp
+(use-package nix-mode
+  :mode "\\.nix\\'")
+#+END_SRC
+
+**** Markdown 
+#+BEGIN_SRC emacs-lisp
+(use-package markdown-mode
+  :mode ("\\.md\\'" "\\.markdown\\'"))
+#+END_SRC
+
+** Relative Line Numbers
+
+The keys to a stable gutter width are:
+1. Set ~display-line-numbers-width~ globally as a default BEFORE the mode enables.
+2. Set ~display-line-numbers-right-justify~ to ~t~ so numbers are right-aligned
+   within the fixed-width gutter. Without this, numbers are left-aligned and the
+   text body shifts sideways whenever the relative number gains or loses a digit
+   as the cursor moves.
+3. In org-mode, re-assert the width AFTER ~variable-pitch-mode~ fires, because
+   proportional fonts cause Emacs to recalculate gutter metrics. We do this by
+   appending to the hook (the ~t~ argument to ~add-hook~) so it runs last.
+
+#+BEGIN_SRC emacs-lisp
+  (setq-default display-line-numbers-type 'relative)
+  (setq-default display-line-numbers-width 4)  ;; 4 = 3 digit columns + 1 padding so
+                                                ;; two-digit numbers never reflow the gutter
+  (setq-default display-line-numbers-right-justify t) ;; right-align numbers so the text
+                                                       ;; body stays anchored as digits change
+  (global-display-line-numbers-mode t)
+
+  (dolist (mode '(term-mode-hook
+                  shell-mode-hook
+                  eshell-mode-hook
+                  vterm-mode-hook
+                  treemacs-mode-hook
+                  minibuffer-setup-hook))
+    (add-hook mode (lambda () (display-line-numbers-mode 0))))
+
+  ;; Re-assert fixed gutter width in org-mode AFTER variable-pitch-mode fires.
+  ;; The trailing `t` appends this hook so it runs after all others on the hook list.
+  (add-hook 'org-mode-hook
+            (lambda ()
+              (setq-local display-line-numbers-width 4)
+              (setq-local display-line-numbers-width-start nil))
+            t)
+(custom-set-faces
+ '(line-number               ((t (:inherit fixed-pitch))))
+ '(line-number-current-line  ((t (:inherit fixed-pitch)))))
+#+END_SRC
+
+* Editing
+Here I have things such as Evil (vim) mode, completion, and other editing related tweaks.
+
+** Evil
+#+BEGIN_SRC emacs-lisp
+(use-package evil
+  :init
+  (setq evil-want-integration t
+        evil-want-keybinding nil)  ;; required when using evil-collection
+  :config
+  (evil-mode 1))
+
+(use-package evil-collection
+  :after evil
+  :config
+  (evil-collection-init))
+#+END_SRC
+
+** Corfu Completion
+
+Non LSP based completion that works in all buffers. Popular package that leverages built in things Emacs is already doing.  
+
+#+BEGIN_SRC emacs-lisp
+  (use-package corfu
+    :custom
+    (corfu-auto t)           ;; show popup automatically without pressing TAB
+    (corfu-auto-delay 0.1)   ;; seconds before popup appears
+    (corfu-auto-prefix 2)    ;; minimum characters before popup triggers
+    (corfu-cycle t)          ;; wrap around at top/bottom of candidate list
+    (corfu-quit-no-match t)  ;; hide popup if nothing matches
+    :config
+    (global-corfu-mode 1))
+ (with-eval-after-load 'corfu
+  (define-key corfu-map (kbd "ESC") #'corfu-quit))
+#+END_SRC
+
 
 * Org Mode
 
@@ -1087,4 +1092,73 @@ Starts a hidden hugo server process in the background."
     (my/bg-process "hugo:site" dir "hugo" "server")))
 
 (global-set-key (kbd "C-c o s") #'my/open-site)
+#+END_SRC
+
+
+* Spacemacs like Keybinds
+
+*** Window Management
+
+Mirrors the Spacemacs-style ~SPC w~ window prefix from the NixVim config.
+~evil-set-leader~ assigns Space as the leader in normal mode. All bindings
+use ~evil-define-key~ against ~'normal~ state so they only fire in Vim normal
+mode, matching the ~mode = "n"~ behaviour from the Nix config.
+
+~SPC w m [hjkl]~ moves the current pane itself in a direction by swapping its
+contents with the adjacent window, analagous to Vim's ~<C-w> [HJKL]~ (uppercase).
+
+#+BEGIN_SRC emacs-lisp
+(with-eval-after-load 'evil
+  (evil-set-leader 'normal (kbd "SPC"))
+
+  ;; Save and close
+  (evil-define-key 'normal 'global (kbd "<leader>ww") #'save-buffer)
+  (evil-define-key 'normal 'global (kbd "<leader>wx") #'delete-window)
+  (evil-define-key 'normal 'global (kbd "<leader>wd") #'delete-window)
+
+  ;; Splits
+  (evil-define-key 'normal 'global (kbd "<leader>w-") #'split-window-below)
+  (evil-define-key 'normal 'global (kbd "<leader>w/") #'split-window-right)
+
+  ;; Focus movement
+  (evil-define-key 'normal 'global (kbd "<leader>wh") #'windmove-left)
+  (evil-define-key 'normal 'global (kbd "<leader>wl") #'windmove-right)
+  (evil-define-key 'normal 'global (kbd "<leader>wk") #'windmove-up)
+  (evil-define-key 'normal 'global (kbd "<leader>wj") #'windmove-down)
+
+  ;; Swap window positions
+  (evil-define-key 'normal 'global (kbd "<leader>wml") #'windmove-swap-states-right)
+  (evil-define-key 'normal 'global (kbd "<leader>wmh") #'windmove-swap-states-left)
+  (evil-define-key 'normal 'global (kbd "<leader>wmk") #'windmove-swap-states-up)
+  (evil-define-key 'normal 'global (kbd "<leader>wmj") #'windmove-swap-states-down))
+#+END_SRC
+
+*** Files and Terminal
+Throwing these in also to have spacemacs like promps for find files and terminal prompt.
+#+BEGIN_SRC emacs-lisp
+  ;; Terminal
+  (evil-define-key 'normal 'global (kbd "<leader>tt") #'my/toggle-eshell-bottom)
+
+  ;; Files
+  (evil-define-key 'normal 'global (kbd "<leader>ff") #'find-file)
+  (evil-define-key 'normal 'global (kbd "<leader>fd") #'my/open-config)
+#+END_SRC
+
+*** Buffer Management (Space leader)
+
+~SPC b~ prefix mirrors the Spacemacs buffer bindings.
+
+~SPC b b~ switches to the previous buffer, analagous to ~C-x b~ or Vim's ~<C-^>~.
+~SPC b l~ opens the buffer list via ~consult-buffer~, which is already wired up in
+the config and gives the full vertico/orderless fuzzy experience over all open
+buffers. ~SPC b k~ prompts to kill a buffer by name, also routed through consult
+for fuzzy matching.
+
+#+BEGIN_SRC emacs-lisp
+(with-eval-after-load 'evil
+
+  ;; Buffers
+  (evil-define-key 'normal 'global (kbd "<leader>bb") #'previous-buffer)
+  (evil-define-key 'normal 'global (kbd "<leader>bl") #'consult-buffer)
+  (evil-define-key 'normal 'global (kbd "<leader>bk") #'kill-buffer))
 #+END_SRC
