@@ -87,16 +87,20 @@ a patched Nerd Font active on the mode-line specifically.
   (doom-modeline-mode 1)
   :custom
   (doom-modeline-icon nil)              ;; no icons/glyphs, clean text only
-  (doom-modeline-major-mode-icon nil)   ;; no major mode icon
-  (doom-modeline-height 25)             ;; slightly taller than default
-  (doom-modeline-bar-width 3)           ;; left accent bar width
+  (doom-modeline-major-mode-icon t)   ;; no major mode icon
+  (doom-modeline-time-icon t)   ;; no major mode icon
+  (doom-modeline-height 23)             ;; slightly taller than default
+  (doom-modeline-bar-width 5)           ;; left accent bar width
   (doom-modeline-buffer-file-name-style 'truncate-upto-project) ;; short but informative path
-  (doom-modeline-minor-modes nil)       ;; hide minor mode clutter
-  (doom-modeline-enable-word-count nil)
+  (doom-modeline-minor-modes 1)       ;; hide minor mode clutter
+  (doom-modeline-enable-word-count 1)
   (doom-modeline-buffer-encoding nil))  ;; hide UTF-8 noise
 #+END_SRC
 
-** Nix Syntax Highlighting
+** Syntax Highlighting
+Non LSP based syntax highlighting for the main languages on my machine .
+
+**** Nix Syntax 
 
 ~nix-mode~ provides font-lock syntax highlighting for ~.nix~ files with no
 LSP or language server required. Keywords, strings, builtins, interpolation,
@@ -107,6 +111,11 @@ and comments all get distinct colours drawn from the active theme.
   :mode "\\.nix\\'")
 #+END_SRC
 
+**** Markdown 
+#+BEGIN_SRC emacs-lisp
+(use-package markdown-mode
+  :mode ("\\.md\\'" "\\.markdown\\'"))
+#+END_SRC
 
 * Relative Line Numbers
 
@@ -682,10 +691,11 @@ binary. Most distros need ~libpoppler-glib-dev~ and ~libpoppler-private-dev~
 succeed.
 
 #+BEGIN_SRC emacs-lisp
-(use-package pdf-tools
-  :magic ("%PDF" . pdf-view-mode)  ;; open any PDF in pdf-view-mode automatically
-  :config
-  (pdf-tools-install :no-query))   ;; compile epdfinfo silently; no interactive prompt
+  (use-package ox-reveal)
+  (use-package pdf-tools
+    :magic ("%PDF" . pdf-view-mode)  ;; open any PDF in pdf-view-mode automatically
+    :config
+    (pdf-tools-install :no-query))   ;; compile epdfinfo silently; no interactive prompt
 #+END_SRC
 
 ** Org → PDF Live Preview
