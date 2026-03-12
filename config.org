@@ -84,6 +84,7 @@ Some clean up or behavior things which are more or less built in settings I just
         fast-but-imprecise-scrolling t
         scroll-preserve-screen-position t)
   (pixel-scroll-precision-mode 1)
+  (global-hl-line-mode 1)
 #+END_SRC
 
 ** Fonts
