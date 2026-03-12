@@ -27,3 +27,13 @@ This you can see in the screenshots above. I've always sorta wanted this in my w
 *** Per Project Layouts
 
 This is really cool I think. A lot of what I do is edit articles for either my personal blog or our sailing blog. So with a keybinding each I now have Emacs open a larger pane for DirEd in the directory, a shell in the bottom at the directory, and a background process running the hugo server process hidden away from the directory so I can view the local version of the site. This all happens bam right away from startup very satisfying as I do a lot of CD'ing around to do the same thing usually in the terminal based workflow I've been using. 
+
+*** In Emacs Documents
+
+[[./scrot/etype.png]]
+
+This was way more fiddly than I'd've liked but hey it's somehow working now for LaTeX files written in Org mode and Typst files written in well, typst. With this configuraiton, if you're in Org mode and have any sort of LaTeX heading stuff up top in that metadata section, you can C-c C-x p for preview and it'll split the pane and put the output on the right. Each save will update after about a second or two. C-c C-x s will stop the background process. 
+
+**** Typst
+
+The same works for typst documents with the same keybindings. Typst though being faster is setup such that it just works live as you go! It builds a background tmp file which is deleted later and essentially just saves 4 times a second lol. There's gotta be a better way, let me know haha. C-c C-x s also stops this process. 
