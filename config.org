@@ -245,6 +245,23 @@ and comments all get distinct colours drawn from the active theme.
   :mode ("\\.md\\'" "\\.markdown\\'"))
 #+END_SRC
 
+**** Help Buffer Appearance
+
+Enables syntax highlighting in ~*Help*~ buffers so function documentation renders
+with the same font-lock colours as source files. ~help-mode~ already uses
+~font-lock-mode~ internally — ~(add-hook 'help-mode-hook #'font-lock-mode)~ simply
+ensures it is always active.
+
+~variable-pitch-mode~ in ~help-mode-hook~ applies the same proportional font to
+help prose that org-mode uses for its prose sections, while code samples and
+keybind listings in help buffers inherit ~fixed-pitch~ through their existing
+faces, keeping them monospace.
+
+#+BEGIN_SRC emacs-lisp
+(add-hook 'help-mode-hook #'variable-pitch-mode)
+(add-hook 'help-mode-hook #'font-lock-mode)
+#+END_SRC
+
 ** Relative Line Numbers
 
 The keys to a stable gutter width are:
