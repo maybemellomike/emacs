@@ -229,6 +229,45 @@ without hardcoded colours."
   (global-set-key (kbd "C-c T") #'my/toggle-theme)
 #+END_SRC
 
+* Dired / Dirvish
+Ranger-style file navigation with previews and a cleaner display within DirEd. 
+
+#+begin_src emacs-lisp
+  (use-package dirvish
+    :ensure t
+    :init
+    (dirvish-override-dired-mode) ;; replace dired globally with dirvish
+    :custom
+    (dirvish-quick-access-entries
+     '(("h" "~/" "Home")
+       ("d" "~/Downloads/" "Downloads")))
+    (dirvish-attributes
+     '(file-time file-size collapse subtree-state vc-state))
+    (dirvish-preview-dispatchers
+     '(image video audio epub pdf))
+    :config
+    (setq dired-listing-switches
+          "-l --almost-all --human-readable --group-directories-first --no-group")
+    :bind
+    (("C-c f" . dirvish)
+     :map dirvish-mode-map
+     ("a"   . dirvish-quick-access)
+     ("f"   . dirvish-file-info-menu)
+     ("y"   . dirvish-yank-menu)
+     ("N"   . dirvish-narrow)
+     ("^"   . dirvish-history-last)
+     ("h"   . dirvish-history-jump)
+     ("s"   . dirvish-quicksort)
+     ("TAB" . dirvish-subtree-toggle)
+     ("M-n" . dirvish-history-go-forward)
+     ("M-p" . dirvish-history-go-backward)
+     ("M-l" . dirvish-ls-switches-menu)
+     ("M-m" . dirvish-mark-menu)
+     ("M-f" . dirvish-toggle-fullscreen)))
+(setq dirvish-default-layout '(1 0.11 0.55))
+#+end_src
+#+end_src
+
 *** Icons
 #+BEGIN_SRC emacs-lisp
 (use-package nerd-icons)
@@ -257,73 +296,6 @@ a patched Nerd Font active on the mode-line specifically.
   (doom-modeline-minor-modes 1)       ;; hide minor mode clutter
   (doom-modeline-enable-word-count 1)
   (doom-modeline-buffer-encoding nil))  ;; hide UTF-8 noise
-#+END_SRC
-
-*** Dank Doom-modeline Addins
-
-***** Weather and Time Segment
-
-Fetches current weather from wttr.in once a day and displays it
-alongside the time in the right side of the mode line. The fetch
-is asynchronous so it never blocks Emacs on startup. The result
-is cached and only re-requested after 24 hours.
-
-#+BEGIN_SRC emacs-lisp
-(defvar my/weather-cache ""
-  "Cached weather string fetched from wttr.in.")
-
-(defvar my/weather-last-fetch 0
-  "Unix timestamp of the last successful weather fetch.")
-
-(defvar my/weather-fetch-interval (* 60 60 24)
-  "How often to re-fetch weather in seconds. Default is once a day.")
-
-(defun my/weather-fetch ()
-  "Fetch weather from wttr.in asynchronously and update the cache."
-  (let ((now (float-time)))
-    (when (> (- now my/weather-last-fetch) my/weather-fetch-interval)
-      (make-process
-       :name "weather-fetch"
-       :buffer " *weather-fetch*"
-       :command '("curl" "--silent" "--max-time" "5"
-                  "wttr.in/?format=%t+%C")
-       :sentinel (lambda (proc event)
-                   (when (string= event "finished\n")
-                     (with-current-buffer (process-buffer proc)
-                       (let ((result (string-trim (buffer-string))))
-                         (unless (string-empty-p result)
-                           (setq my/weather-cache result)
-                           (setq my/weather-last-fetch (float-time))
-                           (force-mode-line-update t))))
-                     (kill-buffer (process-buffer proc))))))))
-
-(defun my/weather-maybe-refresh ()
-  "Trigger a weather fetch if the cache has expired. Safe to call frequently."
-  (let ((now (float-time)))
-    (when (> (- now my/weather-last-fetch) my/weather-fetch-interval)
-      (my/weather-fetch))))
-
-;; Refresh check runs every 30 minutes — lightweight since it only
-;; actually hits the network when the 24 hour cache has expired
-(run-with-timer 0 (* 30 60) #'my/weather-maybe-refresh)
-
-(doom-modeline-def-segment my/weather-segment
-  "Displays cached weather and current time in the mode line."
-  (when (doom-modeline--active)
-    (concat
-     (propertize (format " %s " my/weather-cache)
-                 'face 'doom-modeline-buffer-minor-mode)
-     (propertize (format-time-string " %H:%M ")
-                 'face 'doom-modeline-time))))
-
-(doom-modeline-def-modeline 'my/modeline
-  '(bar matches buffer-info remote-host buffer-position)
-  '(my/weather-segment misc-info minor-modes input-method buffer-encoding
-    major-mode vcs))
-
-(add-hook 'doom-modeline-mode-hook
-          (lambda ()
-            (doom-modeline-set-modeline 'my/modeline t)))
 #+END_SRC
 
 ** Syntax Highlighting
