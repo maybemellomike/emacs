@@ -17,3 +17,13 @@ This is what everyone says to do at some point so here we are. This is the from 
 [[./scrot/light.png]]
 
 [[./scrot/dark.png]]
+
+** Neat Features I've Got Workin'
+
+*** Theme Switching
+
+This you can see in the screenshots above. I've always sorta wanted this in my window manager so its cool it works here. With C-c T I can hop back and forth between a dark and light theme. I've chosen doom-molokai-machine for the dark and the classic ef-cyprus for the light. Both look rather nice I think 
+
+*** Per Project Layouts
+
+This is really cool I think. A lot of what I do is edit articles for either my personal blog or our sailing blog. So with a keybinding each I now have Emacs open a larger pane for DirEd in the directory, a shell in the bottom at the directory, and a background process running the hugo server process hidden away from the directory so I can view the local version of the site. This all happens bam right away from startup very satisfying as I do a lot of CD'ing around to do the same thing usually in the terminal based workflow I've been using. 
