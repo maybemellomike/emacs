@@ -92,7 +92,7 @@ so swapping fonts only ever requires changing a single block.
 #+BEGIN_SRC emacs-lisp
 (set-face-attribute 'default nil        :family "Fantasque Sans Mono"     :height 120)
 (set-face-attribute 'fixed-pitch nil    :family "Fantasque Sans Mono"     :height 120)
-(set-face-attribute 'variable-pitch nil :family "NewComputerModernSans08" :height 140)
+(set-face-attribute 'variable-pitch nil :family "NewComputerModernSans10" :height 140)
 #+END_SRC
 ** Small Changes for Big Effect
 
