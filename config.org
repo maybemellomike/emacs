@@ -686,135 +686,160 @@ GitHub repository. This is one of straight's core strengths over ~package.el~
   :mode ("\\.typ\\'" . typst-mode))
 #+END_SRC
 
-** Typst → PDF Live Preview
+** Typst Live Preview
 
-The architecture here differs from the Org/LaTeX preview because Typst has
-~typst watch~ built into its CLI: a single long-running background process that
-recompiles the document automatically on every file change, typically in under
-a second. There is no need to hook into ~after-save-hook~ and trigger a
-compilation manually — Typst handles that side entirely.
+Side-by-side Typst + PDF workflow. Because ~typst~ compiles in milliseconds,
+the preview updates as you type rather than only on save.
 
-What Emacs does:
-- ~my/typst-preview-open~ spawns ~typst watch <file>~ as a background process,
-  splits the frame, and opens the PDF on the right.
-- A buffer-local idle timer polls the PDF file's modification time once per
-  second. When it detects the file has been updated on disk (meaning Typst
-  finished a compile), it calls ~pdf-view-revert-buffer~ to refresh the view.
-- ~my/typst-preview-stop~ kills the ~typst watch~ process, cancels the timer,
-  and closes the PDF window.
+Rather than auto-saving your real file, the preview writes the buffer contents
+to a hidden temp file on an idle timer and points ~typst watch~ at that. Your
+actual ~.typ~ file is never touched until you explicitly save with ~:w~.
 
-The only OS dependency is the ~typst~ binary on ~$PATH~. On NixOS this is
-~programs.typst.enable = true;~ or ~environment.systemPackages = [ pkgs.typst ];~
-in your system config. On any other machine it is a single binary with no
-runtime dependencies.
+How it works:
+- ~C-c p o~ creates a temp file, starts ~typst watch~ on it outputting the PDF
+  next to your real file, splits the frame, and opens the PDF on the right.
+- An idle timer fires 0.5s after you stop typing and writes the buffer contents
+  to the temp file, triggering ~typst watch~ to recompile.
+- A second idle timer fires 1.0s after you stop typing and reverts the
+  pdf-tools buffer to show the updated PDF.
+- ~C-c p s~ kills the watch process, cancels both timers, deletes the temp
+  file, and closes the PDF window.
 
-*Keybinds (active only inside ~typst-ts-mode~ buffers):*
-- ~C-c p o~ — open the live preview split
-- ~C-c p s~ — stop the preview and close the PDF window
+Requires ~typst~ on your PATH. On NixOS: ~environment.systemPackages = [ pkgs.typst ];~
 
 #+BEGIN_SRC emacs-lisp
-(defvar-local my/typst-watch-process nil
-  "The running `typst watch' process for this buffer, or nil.")
+(defvar-local my/typst-preview-active nil
+  "Non-nil when the Typst live preview is running for this buffer.")
 
-(defvar-local my/typst-poll-timer nil
-  "The idle timer that polls the PDF modification time for this buffer.")
+(defvar-local my/typst-preview--pdf-path nil
+  "Cached PDF output path for this Typst buffer.")
 
-(defvar-local my/typst-pdf-last-mtime nil
-  "Modification time of the PDF the last time the poll timer ran.")
+(defvar-local my/typst-preview--tmp-file nil
+  "Temp file that receives buffer contents to trigger typst watch.")
 
-(defun my/typst-preview--pdf-path ()
-  "Return the expected PDF output path for the current Typst buffer."
-  (concat (file-name-sans-extension (buffer-file-name)) ".pdf"))
+(defvar-local my/typst-preview--write-timer nil
+  "Idle timer that writes buffer contents to the temp file.")
 
-(defun my/typst-preview--poll (org-buf pdf-path)
-  "Check if the PDF at PDF-PATH has been updated and refresh if so.
-Intended to be called by the buffer-local poll timer."
-  (when (and (buffer-live-p org-buf)
-             (file-exists-p pdf-path))
-    (let ((mtime (file-attribute-modification-time
-                  (file-attributes pdf-path))))
-      (with-current-buffer org-buf
-        (when (not (equal mtime my/typst-pdf-last-mtime))
-          (setq my/typst-pdf-last-mtime mtime)
-          ;; Revert the PDF buffer if it is visible in any window.
-          (let ((pdf-buf (find-buffer-visiting pdf-path)))
-            (when (and pdf-buf (buffer-live-p pdf-buf))
-              (with-current-buffer pdf-buf
-                (pdf-view-revert-buffer nil t)))))))))
+(defvar-local my/typst-preview--revert-timer nil
+  "Idle timer that reverts the pdf-tools buffer after recompilation.")
+
+(defvar-local my/typst-preview--process nil
+  "The typst watch background process for this buffer.")
+
+(defun my/typst-preview--do-revert (pdf-path)
+  "Revert the pdf-tools buffer visiting PDF-PATH if it exists."
+  (let ((pdf-buf (find-buffer-visiting pdf-path)))
+    (when (and pdf-buf (buffer-live-p pdf-buf))
+      (with-current-buffer pdf-buf
+        (pdf-view-revert-buffer nil t)))))
+
+(defun my/typst-preview--write-tmp (typst-buf tmp-file)
+  "Write contents of TYPST-BUF to TMP-FILE to trigger typst watch."
+  (when (buffer-live-p typst-buf)
+    (with-current-buffer typst-buf
+      (write-region (point-min) (point-max) tmp-file nil 'silent))))
+
+(defun my/typst-preview--start-timers (typst-buf tmp-file pdf-path)
+  "Arm the write and revert idle timers for TYPST-BUF."
+  (with-current-buffer typst-buf
+    (when (timerp my/typst-preview--write-timer)
+      (cancel-timer my/typst-preview--write-timer))
+    (when (timerp my/typst-preview--revert-timer)
+      (cancel-timer my/typst-preview--revert-timer))
+    (setq my/typst-preview--write-timer
+          (run-with-idle-timer 0.5 t
+                               #'my/typst-preview--write-tmp
+                               typst-buf tmp-file))
+    (setq my/typst-preview--revert-timer
+          (run-with-idle-timer 1.0 t
+                               #'my/typst-preview--do-revert
+                               pdf-path))))
+
+(defun my/typst-preview--open-split (typst-buf pdf-path proc-name)
+  "Open the PDF split for TYPST-BUF after the initial compile.
+Called by a timer 1.5s after starting typst watch."
+  (if (not (file-exists-p pdf-path))
+      (message "Typst compile failed — check *%s* for errors" proc-name)
+    (let* ((typ-win (get-buffer-window typst-buf))
+           (pdf-buf (or (find-buffer-visiting pdf-path)
+                        (let ((b (find-file-noselect pdf-path)))
+                          (with-current-buffer b
+                            (pdf-view-mode)
+                            (display-line-numbers-mode 0))
+                          b)))
+           (pdf-win (get-buffer-window pdf-buf)))
+      (if pdf-win
+          (with-current-buffer pdf-buf
+            (pdf-view-revert-buffer nil t))
+        (let ((new-win (split-window typ-win nil 'right)))
+          (set-window-buffer new-win pdf-buf)))
+      (select-window (get-buffer-window typst-buf))
+      (message "Typst preview active — updates as you type."))))
 
 (defun my/typst-preview-open ()
-  "Start `typst watch', open the output PDF in a right-hand split,
-and begin polling for updates. Focus remains on the Typst source buffer."
+  "Start a Typst live preview in a right-hand split.
+Buffer contents are written to a temp file so your real file is never
+touched until you explicitly save."
   (interactive)
   (unless (buffer-file-name)
     (user-error "Buffer must be visiting a file before opening Typst preview"))
-  (unless (eq major-mode 'typst-mode)
+  (unless (string-match-p "typst" (symbol-name major-mode))
     (user-error "Typst preview is only available in typst-mode buffers"))
   (unless (executable-find "typst")
-    (user-error "typst binary not found on $PATH — install Typst first"))
-  ;; Kill any existing watch process for this buffer before starting a new one.
-  (my/typst-preview-stop)
-  (let* ((typ-file  (buffer-file-name))
-         (pdf-path  (my/typst-preview--pdf-path))
-         (src-buf   (current-buffer))
-         (proc-name (format "typst-watch:%s" (buffer-name)))
-         (proc-buf  (format " *typst-watch:%s*" (buffer-name))))
-    ;; Spawn `typst watch' as a background process. Output goes to a hidden
-    ;; buffer so compilation errors are accessible if needed.
-    (setq my/typst-watch-process
-          (start-process proc-name proc-buf "typst" "watch" typ-file))
-    (set-process-query-on-exit-flag my/typst-watch-process nil)
-    ;; Wait briefly for the initial compile before opening the PDF.
-    (message "Waiting for initial Typst compile…")
-    (sleep-for 1.5)
-    (unless (file-exists-p pdf-path)
-      ;; If the PDF still doesn't exist, wait a little longer.
-      (sleep-for 1.5))
-    (unless (file-exists-p pdf-path)
-      (my/typst-preview-stop)
-      (user-error "Typst compile failed — check buffer %s for errors" proc-buf))
-    ;; Open the PDF in a right-hand split.
-    (let ((existing-pdf-win (get-buffer-window (find-buffer-visiting pdf-path))))
-      (if existing-pdf-win
-          (select-window existing-pdf-win)
-        (select-window (split-window-right))
-        (find-file pdf-path)))
-    ;; Return focus to the source buffer on the left.
-    (select-window (get-buffer-window src-buf))
-    ;; Start the poll timer: check for PDF changes every second.
-    (setq my/typst-pdf-last-mtime
-          (file-attribute-modification-time (file-attributes pdf-path)))
-    (setq my/typst-poll-timer
-          (run-with-timer 1 1
-                          #'my/typst-preview--poll src-buf pdf-path))
-    (message "Typst preview active — edit and save to see live updates.")))
+    (user-error "typst not found on PATH — install it or add it to your NixOS config"))
+  (let* ((typst-buf  (current-buffer))
+         (typst-file (buffer-file-name))
+         (pdf-path   (concat (file-name-sans-extension typst-file) ".pdf"))
+         (tmp-file   (make-temp-file "emacs-typst-" nil ".typ"))
+         (proc-name  (format "typst-watch:%s" (buffer-name))))
+    (write-region (point-min) (point-max) tmp-file nil 'silent)
+    (unless (process-live-p my/typst-preview--process)
+      (let* ((default-directory (file-name-directory typst-file))
+             (proc (start-process proc-name
+                                  (format " *%s*" proc-name)
+                                  "typst" "watch" tmp-file pdf-path)))
+        (set-process-query-on-exit-flag proc nil)
+        (setq my/typst-preview--process proc)
+        (setq my/typst-preview--tmp-file tmp-file)))
+    (setq my/typst-preview--pdf-path pdf-path)
+    (setq my/typst-preview-active t)
+    (my/typst-preview--start-timers typst-buf tmp-file pdf-path)
+    (message "Starting Typst watch — opening preview…")
+    (run-with-timer 1.5 nil
+                    #'my/typst-preview--open-split
+                    typst-buf pdf-path proc-name)))
 
 (defun my/typst-preview-stop ()
-  "Stop `typst watch', cancel the poll timer, and close the PDF window."
+  "Stop the Typst live preview and close the PDF window."
   (interactive)
-  ;; Cancel the poll timer.
-  (when (timerp my/typst-poll-timer)
-    (cancel-timer my/typst-poll-timer)
-    (setq my/typst-poll-timer nil))
-  ;; Kill the typst watch process.
-  (when (process-live-p my/typst-watch-process)
-    (kill-process my/typst-watch-process)
-    (setq my/typst-watch-process nil))
-  ;; Close the PDF window if visible.
-  (let ((pdf-path (and (buffer-file-name)
-                       (my/typst-preview--pdf-path))))
-    (when pdf-path
-      (let ((pdf-win (get-buffer-window (find-buffer-visiting pdf-path))))
-        (when pdf-win
-          (delete-window pdf-win)))))
+  (setq my/typst-preview-active nil)
+  (when (timerp my/typst-preview--write-timer)
+    (cancel-timer my/typst-preview--write-timer)
+    (setq my/typst-preview--write-timer nil))
+  (when (timerp my/typst-preview--revert-timer)
+    (cancel-timer my/typst-preview--revert-timer)
+    (setq my/typst-preview--revert-timer nil))
+  (when (process-live-p my/typst-preview--process)
+    (kill-process my/typst-preview--process)
+    (setq my/typst-preview--process nil))
+  (when (and my/typst-preview--tmp-file
+             (file-exists-p my/typst-preview--tmp-file))
+    (delete-file my/typst-preview--tmp-file)
+    (setq my/typst-preview--tmp-file nil))
+  (when my/typst-preview--pdf-path
+    (let ((pdf-win (get-buffer-window
+                    (find-buffer-visiting my/typst-preview--pdf-path))))
+      (when pdf-win
+        (delete-window pdf-win))))
   (message "Typst preview stopped."))
 
-;; Bind within typst-mode-map so C-c p o/s only exist in Typst buffers
-;; and mirror the same mnemonic as the org preview keybinds.
 (with-eval-after-load 'typst-mode
-  (define-key typst-mode-map (kbd "C-c p o") #'my/typst-preview-open)
-  (define-key typst-mode-map (kbd "C-c p s") #'my/typst-preview-stop))
+  (define-key typst-mode-map (kbd "C-c C-v p") #'my/typst-preview-open)
+  (define-key typst-mode-map (kbd "C-c C-v s") #'my/typst-preview-stop))
 #+END_SRC
+
+  (define-key typst-mode-map (kbd "C-c C-x p") #'my/typst-preview-open)
+  (define-key typst-mode-map (kbd "C-c C-x s") #'my/typst-preview-stop))
 
 * Silence
 
@@ -825,4 +850,122 @@ speaker or flash the frame depending on the desktop environment.
 #+BEGIN_SRC emacs-lisp
 (setq ring-bell-function 'ignore)  ;; disable audible bell entirely
 (setq visible-bell nil)            ;; disable the visual flash fallback
+#+END_SRC
+
+** Automagic Layouts
+
+#+BEGIN_SRC emacs-lisp
+(defun my/open-config ()
+  "Open config.org in the current window."
+  (interactive)
+  (find-file (expand-file-name "config.org" user-emacs-directory)))
+
+(global-set-key (kbd "C-c o c") #'my/open-config)
+#+END_SRC
+
+* Project Layouts
+
+Each function below opens a purpose-built window layout for a specific project
+or directory. They all follow the same pattern:
+
+1. ~delete-other-windows~ for a clean slate
+2. ~dired~ in the project directory in the top window
+3. A visible eshell pane in the bottom third, ~cd~'d into the project directory
+4. Focus returned to dired so you can navigate immediately
+
+The ~C-c o~ prefix is used throughout: ~o~ for "open", followed by a letter
+identifying the project.
+
+A shared helper ~my/project-layout~ handles the common dired + eshell
+scaffolding so each project function only needs to declare its directory,
+buffer names, and any extra background processes.
+
+#+BEGIN_SRC emacs-lisp
+(defun my/project-layout (dir eshell-buf-name)
+  "Open a standard project layout for DIR.
+Creates a dired window on top and an eshell in a bottom split,
+both rooted at DIR.  ESHELL-BUF-NAME is the buffer name to use
+for the eshell so each project gets its own independent shell."
+  (unless (file-directory-p dir)
+    (user-error "Directory not found: %s" dir))
+  (delete-other-windows)
+  (dired dir)
+  (let* ((total-height (frame-height))
+         (shell-height (max 10 (/ total-height 3)))
+         (eshell-win   (split-window-below (- total-height shell-height))))
+    (select-window eshell-win)
+    (if (get-buffer eshell-buf-name)
+        (progn
+          (switch-to-buffer eshell-buf-name)
+          (with-current-buffer eshell-buf-name
+            (eshell/cd dir)
+            (eshell-reset)))
+      ;; Create a new eshell with the desired buffer name
+      (let ((eshell-buffer-name eshell-buf-name))
+        (eshell 'new)))
+    (with-current-buffer eshell-buf-name
+      (eshell/cd dir)
+      (eshell-reset)))
+  (select-window (get-buffer-window (dired-noselect dir))))
+
+(defun my/bg-process (name dir command &rest args)
+  "Ensure a background process named NAME is running COMMAND in DIR.
+If a process with NAME is already live, does nothing.
+Output goes to a hidden buffer ' *NAME*' (leading space keeps it
+out of the buffer list)."
+  (unless (process-live-p (get-process name))
+    (let ((default-directory dir))
+      (apply #'start-process name (format " *%s*" name) command args)
+      (set-process-query-on-exit-flag (get-process name) nil))))
+#+END_SRC
+
+*** Dotfiles (~C-c o d~)
+
+Opens ~~/dots~ with dired on top and an eshell below.
+
+#+BEGIN_SRC emacs-lisp
+(defun my/open-dotfiles ()
+  "Open a dotfiles workspace: dired on ~/dots, eshell below."
+  (interactive)
+  (my/project-layout (expand-file-name "~/dots") "*eshell:dots*"))
+
+(global-set-key (kbd "C-c o d") #'my/open-dotfiles)
+#+END_SRC
+
+*** Personal Blog (~C-c o b~)
+
+Opens ~~/dox/blog~ with dired on top and an eshell below. Also starts a hidden
+~hugo server~ process in the background so the preview server is running while
+you work. The process is only spawned if it is not already live, so pressing
+~C-c o b~ repeatedly is safe. The Hugo output is accessible in the buffer
+~ *hugo:blog*~ if you need to check for errors.
+
+#+BEGIN_SRC emacs-lisp
+(defun my/open-blog ()
+  "Open the blog workspace: dired + eshell in ~/dox/blog.
+Starts a hidden hugo server process in the background."
+  (interactive)
+  (let ((dir (expand-file-name "~/dox/blog")))
+    (my/project-layout dir "*eshell:blog*")
+    (my/bg-process "hugo:blog" dir "hugo" "server")))
+
+(global-set-key (kbd "C-c o b") #'my/open-blog)
+#+END_SRC
+
+*** Sailing Blog (~C-c o s~)
+
+Opens ~~/dox/clean-rebuild~ with dired on top and an eshell below. Also starts
+a hidden ~hugo server~ process for this project in the background, independent
+of the blog server.
+
+#+BEGIN_SRC emacs-lisp
+(defun my/open-site ()
+  "Open the site workspace: dired + eshell in ~/dox/clean-rebuild.
+Starts a hidden hugo server process in the background."
+  (interactive)
+  (let ((dir (expand-file-name "~/dox/clean-rebuild")))
+    (my/project-layout dir "*eshell:site*")
+    (my/bg-process "hugo:site" dir "hugo" "server")))
+
+(global-set-key (kbd "C-c o s") #'my/open-site)
 #+END_SRC
