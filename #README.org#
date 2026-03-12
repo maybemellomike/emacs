@@ -53,7 +53,7 @@ I am using Fantasque Mono Sans from the Nerd Fonts package for the monospace or 
 
 *** Documents
 
-Currently I have both the TeXliveFull package and typst installed on my machine. These are available across lots of distros and on MacOS if I'm not mistaken with Nix or homebrew if you're still not migrated over to Nix (which you should be lol). These are required for the Org --> output documents and live viewing setups within this ever growing configuration.
+jkjkkjjujjjasdf
 
-*** Spell Check
+*** spellkjkkjx Check
 This isn't working yet unfortunately due to NixOS's paths and such. But I have hunspell as the backend for FlySpell, the Emacs plugin for spelling. You install hunspell on your machine as well as the dictonaries for the languges you are typing in, or at least hoping to spell check in lol.   
