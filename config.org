@@ -176,22 +176,22 @@ tinted background on both dark and light themes rather than a jarring mismatch.
   (defvar my/current-theme 'dark
     "Tracks which theme is active: the symbol `dark' or `light'.")
 
-  (defun my/apply-org-theme-faces ()
-    "Re-apply org code-block faces to match the currently active theme.
-  Called after every theme switch so blocks never inherit stale colours."
-    (if (eq my/current-theme 'dark)
-        ;; Dark theme — monokai-flavoured block colours
-        (custom-set-faces
-         '(org-block            ((t (:inherit fixed-pitch :background "#2d2d2d"))))
-         '(org-block-begin-line ((t (:inherit fixed-pitch :foreground "#aaaaaa" :background "#2d2d2d"))))
-         '(org-block-end-line   ((t (:inherit fixed-pitch :foreground "#aaaaaa" :background "#2d2d2d"))))
-         '(org-code             ((t (:inherit fixed-pitch :foreground "#A6E22E")))))
-      ;; Light theme — ef-cyprus uses warm off-whites; a pale grey block reads cleanly
-      (custom-set-faces
-       '(org-block            ((t (:inherit fixed-pitch :background "#eef0e8"))))
-       '(org-block-begin-line ((t (:inherit fixed-pitch :foreground "#888c80" :background "#eef0e8"))))
-       '(org-block-end-line   ((t (:inherit fixed-pitch :foreground "#888c80" :background "#eef0e8"))))
-       '(org-code             ((t (:inherit fixed-pitch :foreground "#3a5f00")))))))
+(defun my/apply-org-theme-faces ()
+  "Re-apply org code-block faces relative to the active theme background.
+Called after every theme switch so blocks always contrast correctly
+without hardcoded colours."
+  (let* ((bg      (face-background 'default nil t))
+         (block-bg (if (eq my/current-theme 'dark)
+                       (color-darken-name bg 4)
+                     (color-darken-name bg 3)))
+         (comment (if (eq my/current-theme 'dark) "#888888" "#999988")))
+    (custom-set-faces
+     `(org-block            ((t (:inherit fixed-pitch :background ,block-bg))))
+     `(org-block-begin-line ((t (:inherit fixed-pitch :foreground ,comment
+                                 :background ,block-bg))))
+     `(org-block-end-line   ((t (:inherit fixed-pitch :foreground ,comment
+                                 :background ,block-bg))))
+     `(org-code             ((t (:inherit fixed-pitch)))))))
 
   (defun my/toggle-theme ()
     "Toggle between `my/dark-theme' and `my/light-theme'."
