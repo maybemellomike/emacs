@@ -1228,16 +1228,19 @@ buffer names, and any extra background processes.
 #+BEGIN_SRC emacs-lisp
 (defun my/project-layout (dir eshell-buf-name)
   "Open a standard project layout for DIR.
-Creates a dired window on top and an eshell in a bottom split,
-both rooted at DIR.  ESHELL-BUF-NAME is the buffer name to use
-for the eshell so each project gets its own independent shell."
+Creates a fuzzy file-finder prompt for DIR on top and an eshell
+in a bottom split.  Selected files open in the top window.
+ESHELL-BUF-NAME is the buffer name for the eshell."
   (unless (file-directory-p dir)
     (user-error "Directory not found: %s" dir))
   (delete-other-windows)
-  (dired dir)
-  (let* ((total-height (frame-height))
+  (let* ((top-win      (selected-window))
+         (placeholder  (get-buffer-create (format " *layout:%s*" dir)))
+         (total-height (frame-height))
          (shell-height (max 10 (/ total-height 3)))
-         (eshell-win   (split-window-below (- total-height shell-height))))
+         (eshell-win   (progn
+                         (switch-to-buffer placeholder)
+                         (split-window-below (- total-height shell-height)))))
     (select-window eshell-win)
     (if (get-buffer eshell-buf-name)
         (progn
@@ -1245,13 +1248,35 @@ for the eshell so each project gets its own independent shell."
           (with-current-buffer eshell-buf-name
             (eshell/cd dir)
             (eshell-reset)))
-      ;; Create a new eshell with the desired buffer name
       (let ((eshell-buffer-name eshell-buf-name))
         (eshell 'new)))
     (with-current-buffer eshell-buf-name
       (eshell/cd dir)
-      (eshell-reset)))
-  (select-window (get-buffer-window (dired-noselect dir))))
+      (eshell-reset))
+    (select-window top-win)
+    (my/fuzzy-find-in-dir dir top-win)))
+
+(defun my/fuzzy-find-in-dir (dir target-win)
+  "Fuzzy-find a file under DIR, opening the result in TARGET-WIN.
+Uses consult with fd (if available) or find as the file source."
+  (let* ((default-directory dir)
+         (files (split-string
+                 (shell-command-to-string
+                  (if (executable-find "fd")
+                      (format "fd --type f --strip-cwd-prefix . %s"
+                              (shell-quote-argument dir))
+                    (format "find %s -type f -not -path '*/\.*'"
+                            (shell-quote-argument dir))))
+                 "\n" t))
+         (choice (consult--read
+                  files
+                  :prompt "Find file: "
+                  :category 'file
+                  :sort nil
+                  :state (consult--file-preview))))
+    (when choice
+      (select-window target-win)
+      (find-file (expand-file-name choice dir)))))
 
 (defun my/bg-process (name dir command &rest args)
   "Ensure a background process named NAME is running COMMAND in DIR.
