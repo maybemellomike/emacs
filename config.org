@@ -1461,10 +1461,11 @@ from that repository.
   (let ((msg (read-string "Commit message: ")))
     (if (string-empty-p msg)
         (message "Sync aborted — commit message cannot be empty.")
-      (let* ((src  (expand-file-name "~/dots/"))
-             (dest (expand-file-name "~/dox/nixdots/"))
+      (let* ((src           (expand-file-name "~/dots/"))
+             (dest          (expand-file-name "~/dox/nixdots/"))
              (default-directory dest)
-             (buf  (get-buffer-create "*dotfiles-sync*")))
+             (buf           (get-buffer-create "*dotfiles-sync*"))
+             (original-win  (selected-window)))
         (with-current-buffer buf
           (erase-buffer))
         (display-buffer buf)
@@ -1486,15 +1487,16 @@ from that repository.
                     (let ((push-result (call-process "git" nil buf t "push")))
                       (if (not (zerop push-result))
                           (message "Git push failed — check *dotfiles-sync* for details")
+                        (select-window original-win)
                         (message "Dotfiles synced and pushed: %s" msg)))))))))))))
 
 (with-eval-after-load 'evil
   (evil-define-key 'normal 'global (kbd "<leader>gd") #'my/sync-dotfiles))
 #+END_SRC
 
-*** NixOS Rebuild (~SPC f d r~)
+*** NixOS Rebuild (~SPC g r~)
 
-~SPC f d r~ opens a split below, ~cd~'s into ~~/dots/~, and runs
+~SPC g r~ opens a split below, ~cd~'s into ~~/dots/~, and runs
 ~doas nixos-rebuild test --flake .~ so the password prompt and build
 output are visible as they stream in. The split reuses an existing
 ~*nixos-rebuild*~ eshell buffer if one is already open.
