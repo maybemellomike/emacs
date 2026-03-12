@@ -1493,6 +1493,13 @@ buffers. ~SPC b k~ prompts to kill a buffer by name, also routed through consult
 for fuzzy matching.
 
 #+BEGIN_SRC emacs-lisp
+  (defun my/kill-buffer-and-window ()
+    "Kill the current buffer and close its window if not the only one."
+    (interactive)
+    (kill-current-buffer)
+    (when (> (count-windows) 1)
+      (delete-window)))
+
   (with-eval-after-load 'evil
 
     ;; Buffers
@@ -1500,7 +1507,8 @@ for fuzzy matching.
     (evil-define-key 'normal 'global (kbd "<leader>bl") #'consult-buffer)
     (evil-define-key 'normal 'global (kbd "<leader>bk") #'kill-buffer)
     (evil-define-key 'normal 'global (kbd "<leader>bn") #'next-buffer)
-    (evil-define-key 'normal 'global (kbd "<leader>bs") #'mode-line-other-buffer))
+    (evil-define-key 'normal 'global (kbd "<leader>bs") #'mode-line-other-buffer)
+    (evil-define-key 'normal 'global (kbd "<leader>wk") #'my/kill-buffer-and-window))
 #+END_SRC
 
 **** Project Layouts With Leader

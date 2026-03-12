@@ -14,7 +14,6 @@ This is what everyone says to do at some point so here we are. This is the from 
 
 *** Theme Switching
 [[./scrot/light.png]]
-
 [[./scrot/dark.png]]
 This you can see in the screenshots above. I've always sorta wanted this in my window manager so its cool it works here. With C-c T I can hop back and forth between a dark and light theme. I've chosen doom-molokai-machine for the dark and the classic ef-cyprus for the light. Both look rather nice I think 
 
