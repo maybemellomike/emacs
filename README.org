@@ -1,10 +1,10 @@
-#+TITLE: README
+#+TITLE: Ding-Macs (Emacs for Dinguses)
 #+AUTHOR: liam
 #+DESCRIPTION: Givin' this whirwind a go.
 
-* Here We Go, Emacs
+* Here We Go
 
-It's been a long time coming, taked about everywhere, feared by most. I have never really played with this aside from  opening up the vanilla version a few times throughout the years and thinking it was ugly.
+It's been a long time coming, taked about everywhere, feared by most. I have never really played with this aside from opening up the vanilla version a few times throughout the years and thinking it was ugly.
 
 ** Starting from Scratch
 
