@@ -83,6 +83,17 @@ a patched Nerd Font active on the mode-line specifically.
   (doom-modeline-buffer-encoding nil))  ;; hide UTF-8 noise
 #+END_SRC
 
+** Nix Syntax Highlighting
+
+~nix-mode~ provides font-lock syntax highlighting for ~.nix~ files with no
+LSP or language server required. Keywords, strings, builtins, interpolation,
+and comments all get distinct colours drawn from the active theme.
+
+#+BEGIN_SRC emacs-lisp
+(use-package nix-mode
+  :mode "\\.nix\\'")
+#+END_SRC
+
 
 * Relative Line Numbers
 
@@ -179,7 +190,7 @@ matching, ~marginalia~ adds annotations, and ~consult~ provides the search comma
   :custom
   (custom-safe-themes t)
   :config
-  (load-theme 'doom-monokai-machine t))
+  (load-theme 'doom-gruvbox t))
 #+END_SRC
 
 ** Theme Toggle
@@ -201,7 +212,7 @@ tinted background on both dark and light themes rather than a jarring mismatch.
   :custom
   (custom-safe-themes t))
 
-(defvar my/dark-theme  'doom-monokai-machine
+(defvar my/dark-theme  'doom-gruvbox
   "The dark theme to use in `my/toggle-theme'.")
 
 (defvar my/light-theme 'ef-cyprus
