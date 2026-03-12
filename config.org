@@ -1509,7 +1509,9 @@ for fuzzy matching.
     (evil-define-key 'normal 'global (kbd "<leader>bk") #'kill-buffer)
     (evil-define-key 'normal 'global (kbd "<leader>bn") #'next-buffer)
     (evil-define-key 'normal 'global (kbd "<leader>bs") #'mode-line-other-buffer)
-    (evil-define-key 'normal 'global (kbd "<leader>wk") #'my/kill-buffer-and-window))
+    (evil-define-key 'normal 'global (kbd "<leader>wk") #'my/kill-buffer-and-window)
+    (evil-define-key 'normal 'global (kbd "<leader>rr") #'my/reload-config)
+    (evil-define-key 'normal 'global (kbd "<leader>tz") #'my/zen-mode))
 #+END_SRC
 
 ***** Open buffer in Split
