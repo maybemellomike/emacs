@@ -73,6 +73,27 @@ Some clean up or behavior things which are more or less built in settings I just
   (pixel-scroll-precision-mode 1)
 #+END_SRC
 
+** Fonts
+Here we are playing around with the available fonts. So just for a note here are a few things which can be run in the scratch buffer to take effect across the whole system to try things out before actually applying them here in the config.
+
+#+BEGIN_SRC emacs-lisp
+  ;; 
+  ;;(print (font-family-list)) This will print all available fonts in mini buffer
+;;
+  ;;(set-face-attribute 'variable-pitch nil :family "testAFont" :height 140)
+  ;;(set-face-attribute 'fixed-pitch nil :family "Your Mono Font Name Here" :height 140)
+
+#+END_SRC
+~variable-pitch~ is the proportional font used in org prose, help buffers,
+markdown, LaTeX, and Typst. ~fixed-pitch~ is the monospace font inherited by
+code blocks, line numbers, and the mode line. Both are set here in one place
+so swapping fonts only ever requires changing a single block.
+
+#+BEGIN_SRC emacs-lisp
+(set-face-attribute 'default nil        :family "Fantasque Sans Mono"     :height 120)
+(set-face-attribute 'fixed-pitch nil    :family "Fantasque Sans Mono"     :height 120)
+(set-face-attribute 'variable-pitch nil :family "NewComputerModernSans08" :height 140)
+#+END_SRC
 ** Small Changes for Big Effect
 
 Somehow there isn't undo from the get go? Or there is but it is very 1970s in that it super tries to conserve ram or something and therefore isn't too practical. Next up is WhichKey which well, shows you the keys available for the next press. Very handy due to the sheer volume of things you /can/ press in Emacs it seems.
