@@ -56,6 +56,19 @@ exists.
 (setq straight-use-package-by-default t)
 #+END_SRC
 
+* Tidy filesystem
+Keep backup and auto-save files out of the way in a central location.
+
+#+begin_src emacs-lisp
+;; Redirect backup files (file~) to a central directory
+(setq backup-directory-alist '(("." . "~/.emacs.d/backups")))
+(setq backup-by-copying t)
+
+;; Redirect auto-save files (#file#) to /tmp
+(setq auto-save-file-name-transforms
+      '((".*" "/tmp/" t)))
+#+end_src
+
 * UI Cleanup
 
 Some clean up or behavior things which are more or less built in settings I just prefer this way over another.
@@ -244,6 +257,73 @@ a patched Nerd Font active on the mode-line specifically.
   (doom-modeline-minor-modes 1)       ;; hide minor mode clutter
   (doom-modeline-enable-word-count 1)
   (doom-modeline-buffer-encoding nil))  ;; hide UTF-8 noise
+#+END_SRC
+
+*** Dank Doom-modeline Addins
+
+***** Weather and Time Segment
+
+Fetches current weather from wttr.in once a day and displays it
+alongside the time in the right side of the mode line. The fetch
+is asynchronous so it never blocks Emacs on startup. The result
+is cached and only re-requested after 24 hours.
+
+#+BEGIN_SRC emacs-lisp
+(defvar my/weather-cache ""
+  "Cached weather string fetched from wttr.in.")
+
+(defvar my/weather-last-fetch 0
+  "Unix timestamp of the last successful weather fetch.")
+
+(defvar my/weather-fetch-interval (* 60 60 24)
+  "How often to re-fetch weather in seconds. Default is once a day.")
+
+(defun my/weather-fetch ()
+  "Fetch weather from wttr.in asynchronously and update the cache."
+  (let ((now (float-time)))
+    (when (> (- now my/weather-last-fetch) my/weather-fetch-interval)
+      (make-process
+       :name "weather-fetch"
+       :buffer " *weather-fetch*"
+       :command '("curl" "--silent" "--max-time" "5"
+                  "wttr.in/?format=%t+%C")
+       :sentinel (lambda (proc event)
+                   (when (string= event "finished\n")
+                     (with-current-buffer (process-buffer proc)
+                       (let ((result (string-trim (buffer-string))))
+                         (unless (string-empty-p result)
+                           (setq my/weather-cache result)
+                           (setq my/weather-last-fetch (float-time))
+                           (force-mode-line-update t))))
+                     (kill-buffer (process-buffer proc))))))))
+
+(defun my/weather-maybe-refresh ()
+  "Trigger a weather fetch if the cache has expired. Safe to call frequently."
+  (let ((now (float-time)))
+    (when (> (- now my/weather-last-fetch) my/weather-fetch-interval)
+      (my/weather-fetch))))
+
+;; Refresh check runs every 30 minutes — lightweight since it only
+;; actually hits the network when the 24 hour cache has expired
+(run-with-timer 0 (* 30 60) #'my/weather-maybe-refresh)
+
+(doom-modeline-def-segment my/weather-segment
+  "Displays cached weather and current time in the mode line."
+  (when (doom-modeline--active)
+    (concat
+     (propertize (format " %s " my/weather-cache)
+                 'face 'doom-modeline-buffer-minor-mode)
+     (propertize (format-time-string " %H:%M ")
+                 'face 'doom-modeline-time))))
+
+(doom-modeline-def-modeline 'my/modeline
+  '(bar matches buffer-info remote-host buffer-position)
+  '(my/weather-segment misc-info minor-modes input-method buffer-encoding
+    major-mode vcs))
+
+(add-hook 'doom-modeline-mode-hook
+          (lambda ()
+            (doom-modeline-set-modeline 'my/modeline t)))
 #+END_SRC
 
 ** Syntax Highlighting
@@ -1410,10 +1490,11 @@ Throwing these in also to have spacemacs like promps for find files and terminal
 #+BEGIN_SRC emacs-lisp
 (with-eval-after-load 'evil
   ;; Terminal
-  (evil-define-key 'normal 'global (kbd "<leader>tt") #'my/toggle-eshell-bottom)
+  (evil-define-key 'normal 'global (kbd "<leader>wt") #'my/toggle-eshell-bottom)
   ;; Files
   (evil-define-key 'normal 'global (kbd "<leader>ff") #'find-file)
   (evil-define-key 'normal 'global (kbd "<leader>fc") #'my/open-config))
+    (evil-define-key 'normal 'global (kbd "<leader>fd") #'my/open-dotfiles)
 #+END_SRC
 
 *** Buffer Management (Space leader)
@@ -1444,12 +1525,36 @@ accessible from normal mode without leaving the home row. ~SPC o k~ now kills al
 
 #+BEGIN_SRC emacs-lisp
   (with-eval-after-load 'evil
-    (evil-define-key 'normal 'global (kbd "<leader>od") #'my/open-dotfiles)
     (evil-define-key 'normal 'global (kbd "<leader>ob") #'my/open-blog)
     (evil-define-key 'normal 'global (kbd "<leader>os") #'my/open-site)
    (evil-define-key 'normal 'global (kbd "<leader>ok") #'my/kill-hugo-servers))
 #+END_SRC
 
+**** Theme Configurations with Leader
+
+#+BEGIN_SRC emacs-lisp
+  (with-eval-after-load 'evil
+    (evil-define-key 'normal 'global (kbd "<leader>tt") #'my/toggle-theme))
+
+  (defun my/load-theme (theme variant)
+  "Load THEME and update `my/current-theme' to VARIANT (dark or light).
+Applies org block faces to match."
+  (mapc #'disable-theme custom-enabled-themes)
+  (load-theme theme t)
+  (setq my/current-theme variant)
+  (my/apply-org-theme-faces)
+  (message "Loaded theme: %s" theme))
+
+(with-eval-after-load 'evil
+  (evil-define-key 'normal 'global (kbd "<leader>tg")
+    (lambda () (interactive) (my/load-theme 'doom-gruvbox 'dark)))
+  (evil-define-key 'normal 'global (kbd "<leader>ts")
+    (lambda () (interactive) (my/load-theme 'ef-symbiosis 'dark)))
+  (evil-define-key 'normal 'global (kbd "<leader>te")
+    (lambda () (interactive) (my/load-theme 'ef-eagle 'light)))
+  (evil-define-key 'normal 'global (kbd "<leader>ta")
+    (lambda () (interactive) (my/load-theme 'ef-autumn 'light))))
+#+END_SRC
 ** Config Sync (~SPC g p~)
 
 ~SPC g p~ copies ~config.org~ to ~~/dox/emacs/~, then stages, commits, and pushes
