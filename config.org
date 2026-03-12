@@ -157,7 +157,10 @@ The keys to a stable gutter width are:
   (evil-collection-init))
 #+END_SRC
 
-* Undo
+* Small Changes for Big Effect
+
+Somehow there isn't undo from the get go? Or there is but it is very 1970s in that it super tries to conserve ram or something and therefore isn't too practical. Next up is WhichKey which well, shows you the keys available for the next press. Very handy due to the sheer volume of things you /can/ press in Emacs it seems.
+
 #+BEGIN_SRC emacs-lisp
     (use-package undo-fu)
   (use-package which-key
