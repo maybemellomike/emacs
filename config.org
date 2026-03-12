@@ -1189,3 +1189,29 @@ message.
 (with-eval-after-load 'evil
   (evil-define-key 'normal 'global (kbd "<leader>gp") #'my/sync-config))
 #+END_SRC
+
+** Dotfiles Sync (~SPC g d~)
+
+~SPC g d~ mirrors ~SPC g p~ but for the NixOS dotfiles. The entire contents of
+~~/dots/~ are copied to ~~/dox/nixdots/~ before staging, committing, and pushing
+from that repository.
+
+#+BEGIN_SRC emacs-lisp
+(defun my/sync-dotfiles ()
+  "Copy ~/dots/* to ~/dox/nixdots/ and commit + push with a prompted message."
+  (interactive)
+  (let ((msg (read-string "Commit message: ")))
+    (if (string-empty-p msg)
+        (message "Sync aborted — commit message cannot be empty.")
+      (let* ((default-directory (expand-file-name "~/dox/nixdots/")))
+        (shell-command (format "cp -r %s %s"
+                               (expand-file-name "~/dots/")
+                               default-directory))
+        (shell-command "git add .")
+        (shell-command (format "git commit -m %S" msg))
+        (shell-command "git push")
+        (message "Dotfiles synced and pushed: %s" msg)))))
+
+(with-eval-after-load 'evil
+  (evil-define-key 'normal 'global (kbd "<leader>gd") #'my/sync-dotfiles))
+#+END_SRC
