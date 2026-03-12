@@ -6,22 +6,16 @@
 
 It's been a long time coming, taked about everywhere, feared by most. I have never really played with this aside from  opening up the vanilla version a few times throughout the years and thinking it was ugly.
 
-** Initial Plan
-
-Being on NixOS getting Doom was more hassle than I was thinking it was worth and Spacemacs had an easy 'download this repo and just point Emacs to it' sort of install. Tried that for a bit and I do like the leader based navigation but it was so complicated I couldn't figure out how to change anything.
-
 ** Starting from Scratch
 
 This is what everyone says to do at some point so here we are. This is the from scratch configuration of total non understanding. It appears to be semi working. What is confusing about Emacs I think is it isn't really clear how its to be used but what I am gathering slowly is its essentially a blank slate meant to be essentially built to make whatever you want your workflow to be.
 
-[[./scrot/light.png]]
-
-[[./scrot/dark.png]]
-
 ** Neat Features I've Got Workin'
 
 *** Theme Switching
+[[./scrot/light.png]]
 
+[[./scrot/dark.png]]
 This you can see in the screenshots above. I've always sorta wanted this in my window manager so its cool it works here. With C-c T I can hop back and forth between a dark and light theme. I've chosen doom-molokai-machine for the dark and the classic ef-cyprus for the light. Both look rather nice I think 
 
 *** Per Project Layouts
@@ -36,11 +30,20 @@ This was way more fiddly than I'd've liked but hey it's somehow working now for 
 
 **** Typst
 
-The same works for typst documents with the same keybindings. Typst though being faster is setup such that it just works live as you go! It builds a background tmp file which is deleted later and essentially just saves 4 times a second lol. There's gotta be a better way, let me know haha. C-c C-x s also stops this process. 
+The same works for typst documents with the same keybindings. Typst though being faster is setup such that it just works live as you go! It builds a background tmp file which is deleted later and essentially just saves 4 times a second lol. There's gotta be a better way, let me know haha. Once the preview is opened ~C-c p l~ will start live previewing. ~C-c p T~ will stop the entire process. 
 
 ** Window Management?
 
 Realizing Emacs was sort of made pre the era of like fancy graphical interfaces this part seems a bit funny now but I'm actually sorta liking how I have this setup. I have a focus change with C-c then hjkl to move where the active pane is, then C-c m + hjkl will move your active pane in that direction. Otherwise the standard confusing Emacs binds are true with C-x 3 to split vertically, 0 closes it, and so on. 
+
+**** Leader Key
+
+I have added for window management and a few other things an additional set of keybinds that start with ~SPC~ much like the Spacemacs method. This seems to work better with the window management I have going already. 
+
+** Repeat Command Macros
+This is pretty nifty. Though the paths are hardcoded these work well for me. I can now ~SPC g p~ and automatically just get prompted for a commit message and my Emacs configuration github repo is updated to my current configuration.
+
+I have the same for my entire dotfiles directory which works well. Along with the dotfiles directory github update I also have a keybinding which opens up a layout with automatic fuzzy finding within the directory, a shell on the bottom 4th of the frame, and a blank window which will open whatever is selected from the fuzzy finding. I can ~SPC g r~ to be just prompted for my password and it'll run ~doas nixos-rebuild test --flake .~ within the correct directory.
 
 ** System Requirements
 

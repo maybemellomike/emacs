@@ -230,7 +230,7 @@ without hardcoded colours."
 #+END_SRC
 
 * Dired / Dirvish
-Ranger-style file navigation with previews and a cleaner display within DirEd. 
+Yazi-style file navigation with previews and a cleaner display within DirEd. 
 
 #+begin_src emacs-lisp
   (use-package dirvish
@@ -239,8 +239,8 @@ Ranger-style file navigation with previews and a cleaner display within DirEd.
     (dirvish-override-dired-mode) ;; replace dired globally with dirvish
     :custom
     (dirvish-quick-access-entries
-     '(("h" "~/" "Home")
-       ("d" "~/Downloads/" "Downloads")))
+     '(("h" "~/" "home")
+       ("d" "~/down/" "down")))
     (dirvish-attributes
      '(file-time file-size collapse subtree-state vc-state))
     (dirvish-preview-dispatchers
@@ -392,6 +392,19 @@ Here I have things such as Evil (vim) mode, completion, and other editing relate
   :config
   (evil-collection-init))
 #+END_SRC
+
+* Smartparens
+Auto-close pairs with smart heuristics to avoid false triggers.
+
+#+begin_src emacs-lisp
+(use-package smartparens
+  :ensure t
+  :hook (prog-mode text-mode org-mode)
+  :config
+  (require 'smartparens-config) ;; loads sane defaults for many major modes
+  (sp-local-pair 'org-mode "*" "*")
+  (sp-local-pair 'org-mode "/" "/"))
+#+end_src
 
 ** Corfu Completion
 
