@@ -1,0 +1,47 @@
+#+TITLE: README
+#+AUTHOR: liam
+#+DESCRIPTION: Givin' this whirwind a go.
+
+* Here We Go, Emacs
+
+It's been a long time coming, taked about everywhere, feared by most. I have never really played with this aside from  opening up the vanilla version a few times throughout the years and thinking it was ugly.
+
+** Initial Plan
+
+Being on NixOS getting Doom was more hassle than I was thinking it was worth and Spacemacs had an easy 'download this repo and just point Emacs to it' sort of install. Tried that for a bit and I do like the leader based navigation but it was so complicated I couldn't figure out how to change anything.
+
+** Starting from Scratch
+
+This is what everyone says to do at some point so here we are. This is the from scratch configuration of total non understanding. It appears to be semi working. What is confusing about Emacs I think is it isn't really clear how its to be used but what I am gathering slowly is its essentially a blank slate meant to be essentially built to make whatever you want your workflow to be.
+
+[[./scrot/light.png]]
+
+[[./scrot/dark.png]]
+
+** Neat Features I've Got Workin'
+
+*** Theme Switching
+
+This you can see in the screenshots above. I've always sorta wanted this in my window manager so its cool it works here. With C-c T I can hop back and forth between a dark and light theme. I've chosen doom-molokai-machine for the dark and the classic ef-cyprus for the light. Both look rather nice I think 
+
+*** Per Project Layouts
+
+This is really cool I think. A lot of what I do is edit articles for either my personal blog or our sailing blog. So with a keybinding each I now have Emacs open a larger pane for DirEd in the directory, a shell in the bottom at the directory, and a background process running the hugo server process hidden away from the directory so I can view the local version of the site. This all happens bam right away from startup very satisfying as I do a lot of CD'ing around to do the same thing usually in the terminal based workflow I've been using. 
+
+*** In Emacs Documents
+
+[[./scrot/etype.png]]
+
+This was way more fiddly than I'd've liked but hey it's somehow working now for LaTeX files written in Org mode and Typst files written in well, typst. With this configuraiton, if you're in Org mode and have any sort of LaTeX heading stuff up top in that metadata section, you can C-c C-x p for preview and it'll split the pane and put the output on the right. Each save will update after about a second or two. C-c C-x s will stop the background process. 
+
+**** Typst
+
+The same works for typst documents with the same keybindings. Typst though being faster is setup such that it just works live as you go! It builds a background tmp file which is deleted later and essentially just saves 4 times a second lol. There's gotta be a better way, let me know haha. C-c C-x s also stops this process. 
+
+** Window Management?
+
+Realizing Emacs was sort of made pre the era of like fancy graphical interfaces this part seems a bit funny now but I'm actually sorta liking how I have this setup. I have a focus change with C-c then hjkl to move where the active pane is, then C-c m + hjkl will move your active pane in that direction. Otherwise the standard confusing Emacs binds are true with C-x 3 to split vertically, 0 closes it, and so on.
+
+**** Leader Based Bindings
+
+I've added in a few bindings matching that of the Spacemacs style for splits and navigating those splits. I'm finding it far too awkward to use the key chords to change split focus and stuff coming from the window manager. Currently leaving the rest of the Emacs bindings. It's neat I can keep both of these going at the same time without interference so I can switch between whatever I'm used to without thinking about it.

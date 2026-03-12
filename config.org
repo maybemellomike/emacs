@@ -565,7 +565,7 @@ returns focus to the window you were in.
           (message "Eshell closed."))
       ;; Otherwise open a new split sized to one third of the frame height
       (let* ((total-height (frame-height))
-             (shell-height (max 10 (/ total-height 3)))
+             (shell-height (max 10 (/ total-height 4)))
              (new-win (split-window-below (- total-height shell-height))))
         (select-window new-win)
         (if (get-buffer eshell-buf-name)
@@ -1161,4 +1161,31 @@ for fuzzy matching.
   (evil-define-key 'normal 'global (kbd "<leader>bb") #'previous-buffer)
   (evil-define-key 'normal 'global (kbd "<leader>bl") #'consult-buffer)
   (evil-define-key 'normal 'global (kbd "<leader>bk") #'kill-buffer))
+#+END_SRC
+
+** Config Sync (~SPC g p~)
+
+~SPC g p~ copies ~config.org~ to ~~/dox/emacs/~, then stages, commits, and pushes
+in that repository. The commit message is read interactively from the minibuffer
+before anything is run, so the push only fires if you confirm with a non-empty
+message.
+
+#+BEGIN_SRC emacs-lisp
+(defun my/sync-config ()
+  "Copy config.org to ~/dox/emacs/ and commit + push with a prompted message."
+  (interactive)
+  (let ((msg (read-string "Commit message: ")))
+    (if (string-empty-p msg)
+        (message "Sync aborted — commit message cannot be empty.")
+      (let* ((src  (expand-file-name "config.org" user-emacs-directory))
+             (dest (expand-file-name "~/dox/emacs/"))
+             (default-directory dest))
+        (copy-file src dest t)
+        (shell-command "git add .")
+        (shell-command (format "git commit -m %S" msg))
+        (shell-command "git push")
+        (message "Config synced and pushed: %s" msg)))))
+
+(with-eval-after-load 'evil
+  (evil-define-key 'normal 'global (kbd "<leader>gp") #'my/sync-config))
 #+END_SRC
