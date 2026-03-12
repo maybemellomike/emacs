@@ -1,17 +1,12 @@
-+TITLE: My Emacs Configuration
+#+TITLE: My Emacs Configuration
 #+AUTHOR: Liam
 #+DESCRIPTION: No, I don't know too much whats happening here but hey something's at least happening
+
 #+PROPERTY: header-args :tangle config.el
 
-* Introduction
+* Bootstrap: straight.el + use-package
 
-Here we go, gettin' wild with Emacs. I'm not even entirely sure what sort of things I'm supposed to look to build /into/ this configuration let alone how to do so, but we are giving it a go nevertheless.
-
-* Define Straight.el and use-package
-
-Hoping to keep this as portable as possible I was reading that using straight.el was a pretty clean way to do so.
-
-straight.el~ is a declarative, reproducible package manager that clones
+~straight.el~ is a declarative, reproducible package manager that clones
 packages directly from their source repositories (Git) rather than downloading
 pre-built tarballs from an archive. This means:
 
@@ -65,9 +60,6 @@ exists.
 
 * Relative Line Numbers
 
-I *do not for the life of me understand* what is going on here. I have taken now from so many configurations I just can't come to believe it's this complicated. I'm having some strange issues with this indenting text in strange spots because it appears the numbers are center aligned so when the go from one to two digits it pushes the text around as the cursor moves. Oh sorry, when /the point/ moves, around the file.
-
-
 The keys to a stable gutter width are:
 1. Set ~display-line-numbers-width~ globally as a default BEFORE the mode enables.
 2. Set ~display-line-numbers-right-justify~ to ~t~ so numbers are right-aligned
@@ -89,7 +81,7 @@ The keys to a stable gutter width are:
 (dolist (mode '(term-mode-hook
                 shell-mode-hook
                 eshell-mode-hook
-               vterm-mode-hook
+                vterm-mode-hook
                 treemacs-mode-hook
                 minibuffer-setup-hook))
   (add-hook mode (lambda () (display-line-numbers-mode 0))))
@@ -104,9 +96,6 @@ The keys to a stable gutter width are:
 #+END_SRC
 
 * Evil
-
-I mean duh
-
 #+BEGIN_SRC emacs-lisp
 (use-package evil
   :init
@@ -128,7 +117,7 @@ I mean duh
 
 * Telescope-like Fuzzy Finder
 
-Thanks Prot ~vertico~ provides the vertical completion UI, ~orderless~ enables fuzzy/space-separated
+~vertico~ provides the vertical completion UI, ~orderless~ enables fuzzy/space-separated
 matching, ~marginalia~ adds annotations, and ~consult~ provides the search commands.
 
 #+BEGIN_SRC emacs-lisp
@@ -168,8 +157,6 @@ matching, ~marginalia~ adds annotations, and ~consult~ provides the search comma
 #+END_SRC
 
 ** Theme Toggle
-
-Wish I could find a clean way to do this computer wide but hey, maybe Emacs will become my computer so this works. 
 
 Toggles between the dark theme (~doom-monokai-machine~) and the light theme
 (~ef-cyprus~). ~C-c T~ is used because ~C-c t~ is already bound to the eshell toggle.
@@ -237,36 +224,6 @@ Called after every theme switch so blocks never inherit stale colours."
 (global-set-key (kbd "C-c T") #'my/toggle-theme)
 #+END_SRC
 
-** Frame Transparency
-
-This isn't working even though I'm on Wayland and transparency in everything else I have installed works without a hitch.
-
-Sets the background to 90% opacity (10% transparent) using ~alpha-background~,
-which is available in Emacs 29+. Unlike the older ~alpha~ parameter which fades
-the entire frame including text, ~alpha-background~ leaves all text and UI
-elements fully opaque — only the background colour bleeds through to whatever
-is behind the Emacs window.
-
-The value is a number from 0 (fully transparent) to 100 (fully opaque).
-~default-frame-alist~ applies it to every frame including the first one,
-whereas ~set-frame-parameter~ applies it to the already-created initial frame
-that exists before ~default-frame-alist~ is processed.
-
-Requires a compositor to be running. On NixOS with a desktop environment
-(GNOME, KDE, etc.) this works out of the box. On a bare tiling window manager
-you may need Picom or similar.
-
-#+BEGIN_SRC emacs-lisp
-(defvar my/frame-opacity 70
-  "Background opacity for all Emacs frames, 0–100.")
-
-;; Apply to the current frame immediately
-(set-frame-parameter nil 'alpha-background my/frame-opacity)
-
-;; Apply to every future frame (e.g. emacsclient frames)
-(add-to-list 'default-frame-alist `(alpha-background . ,my/frame-opacity))
-#+END_SRC
-
 * Icons
 #+BEGIN_SRC emacs-lisp
 (use-package nerd-icons)
@@ -295,48 +252,46 @@ Other coloured elements:
 - ~org-document-info~ — muted grey for #+AUTHOR, #+DATE etc.
 
 #+BEGIN_SRC emacs-lisp
-    (use-package org
-      :straight (:type built-in)  ;; tell straight to use Emacs' built-in org rather than
-                                   ;; cloning from MELPA, avoiding version conflicts
-      :hook
-      ((org-mode . variable-pitch-mode)
-       (org-mode . visual-line-mode))
-      :custom-face
-      ;; Headings — height + weight carried over, foreground colours added
-      (org-level-1 ((t (:height 1.4 :weight bold  :foreground "#F92672"))))
-      (org-level-2 ((t (:height 1.3 :weight bold  :foreground "#66D9EF"))))
-      (org-level-3 ((t (:height 1.2 :weight bold  :foreground "#A6E22E"))))
-      (org-level-4 ((t (:height 1.1 :weight bold  :foreground "#E6DB74"))))
-      (org-level-5 ((t (:height 1.05             :foreground "#FD971F"))))
-      (org-level-6 ((t (:height 1.02             :foreground "#AE81FF"))))
-      (org-level-7 ((t (:height 1.0              :foreground "#75715E"))))
-      (org-level-8 ((t (:height 1.0              :foreground "#75715E"))))
-      ;; Code blocks — background is intentionally unset here so it inherits from
-      ;; the active theme. my/apply-org-theme-faces re-applies theme-appropriate
-      ;; colours whenever the theme is toggled (see Theme Toggle section).
-      (org-block            ((t (:inherit fixed-pitch))))
-      (org-block-begin-line ((t (:inherit fixed-pitch))))
-      (org-block-end-line   ((t (:inherit fixed-pitch))))
-      (org-code             ((t (:inherit fixed-pitch))))
-      ;; Todo keywords
-      (org-todo ((t (:foreground "#F92672" :weight bold))))
-      (org-done ((t (:foreground "#A6E22E" :weight bold))))
-      ;; Timestamps, tags, links
-      (org-date ((t (:foreground "#66D9EF" :underline t))))
-      (org-tag  ((t (:foreground "#FD971F" :weight normal))))
-      (org-link ((t (:foreground "#66D9EF" :underline t))))
-      ;; Definition list terms
-      (org-list-dt ((t (:foreground "#E6DB74" :weight bold))))
-      ;; Document title and info lines (#+TITLE, #+AUTHOR etc.)
-      (org-document-title ((t (:height 1.5 :weight bold :foreground "#F8F8F2"))))
-      (org-document-info  ((t (:foreground "#75715E")))))
+(use-package org
+  :straight (:type built-in)  ;; tell straight to use Emacs' built-in org rather than
+                               ;; cloning from MELPA, avoiding version conflicts
+  :hook
+  ((org-mode . variable-pitch-mode)
+   (org-mode . visual-line-mode))
+  :custom-face
+  ;; Headings — height + weight carried over, foreground colours added
+  (org-level-1 ((t (:height 1.4 :weight bold  :foreground "#F92672"))))
+  (org-level-2 ((t (:height 1.3 :weight bold  :foreground "#66D9EF"))))
+  (org-level-3 ((t (:height 1.2 :weight bold  :foreground "#A6E22E"))))
+  (org-level-4 ((t (:height 1.1 :weight bold  :foreground "#E6DB74"))))
+  (org-level-5 ((t (:height 1.05             :foreground "#FD971F"))))
+  (org-level-6 ((t (:height 1.02             :foreground "#AE81FF"))))
+  (org-level-7 ((t (:height 1.0              :foreground "#75715E"))))
+  (org-level-8 ((t (:height 1.0              :foreground "#75715E"))))
+  ;; Code blocks — background is intentionally unset here so it inherits from
+  ;; the active theme. my/apply-org-theme-faces re-applies theme-appropriate
+  ;; colours whenever the theme is toggled (see Theme Toggle section).
+  (org-block            ((t (:inherit fixed-pitch))))
+  (org-block-begin-line ((t (:inherit fixed-pitch))))
+  (org-block-end-line   ((t (:inherit fixed-pitch))))
+  (org-code             ((t (:inherit fixed-pitch))))
+  ;; Todo keywords
+  (org-todo ((t (:foreground "#F92672" :weight bold))))
+  (org-done ((t (:foreground "#A6E22E" :weight bold))))
+  ;; Timestamps, tags, links
+  (org-date ((t (:foreground "#66D9EF" :underline t))))
+  (org-tag  ((t (:foreground "#FD971F" :weight normal))))
+  (org-link ((t (:foreground "#66D9EF" :underline t))))
+  ;; Definition list terms
+  (org-list-dt ((t (:foreground "#E6DB74" :weight bold))))
+  ;; Document title and info lines (#+TITLE, #+AUTHOR etc.)
+  (org-document-title ((t (:height 1.5 :weight bold :foreground "#F8F8F2"))))
+  (org-document-info  ((t (:foreground "#75715E")))))
 
-    (use-package org-modern
-      :after org
-      :hook
-      (org-mode . org-modern-mode))
-  (require 'ox-md nil t)
-
+(use-package org-modern
+  :after org
+  :hook
+  (org-mode . org-modern-mode))
 #+END_SRC
 
 * Zen Mode (olivetti — no fullscreen)
@@ -353,7 +308,7 @@ Other coloured elements:
           (display-line-numbers-mode 1))
       (progn
         (olivetti-mode 1)
-        (olivetti-set-width 0.8)
+        (olivetti-set-width 88)
         (display-line-numbers-mode 0))))
   :bind
   ("C-c z" . my/zen-mode))
@@ -423,142 +378,6 @@ a single restart will sort it out.
     (message "Config reloaded successfully.")))
 
 (global-set-key (kbd "C-c r") #'my/reload-config)
-
-(defun my/open-config ()
-  "Open config.org in the current window."
-  (interactive)
-  (find-file (expand-file-name "config.org" user-emacs-directory)))
-
-(global-set-key (kbd "C-c o c") #'my/open-config)
-#+END_SRC
-
-* Project Layouts
-
-Each function below opens a purpose-built window layout for a specific project
-or directory. They all follow the same pattern:
-
-1. ~delete-other-windows~ for a clean slate
-2. ~dired~ in the project directory in the top window
-3. A visible eshell pane in the bottom third, ~cd~'d into the project directory
-4. Focus returned to dired so you can navigate immediately
-
-The ~C-c o~ prefix is used throughout: ~o~ for "open", followed by a letter
-identifying the project.
-
-A shared helper ~my/project-layout~ handles the common dired + eshell
-scaffolding so each project function only needs to declare its directory,
-buffer names, and any extra background processes.
-
-#+BEGIN_SRC emacs-lisp
-(defun my/project-layout (dir eshell-buf-name)
-  "Open a standard project layout for DIR.
-Creates a dired window on top and an eshell in a bottom split,
-both rooted at DIR.  ESHELL-BUF-NAME is the buffer name to use
-for the eshell so each project gets its own independent shell."
-  (unless (file-directory-p dir)
-    (user-error "Directory not found: %s" dir))
-  (delete-other-windows)
-  (dired dir)
-  (let* ((total-height (frame-height))
-         (shell-height (max 10 (/ total-height 3)))
-         (eshell-win   (split-window-below (- total-height shell-height))))
-    (select-window eshell-win)
-    (if (get-buffer eshell-buf-name)
-        (progn
-          (switch-to-buffer eshell-buf-name)
-          (with-current-buffer eshell-buf-name
-            (eshell/cd dir)
-            (eshell-reset)))
-      ;; Create a new eshell with the desired buffer name
-      (let ((eshell-buffer-name eshell-buf-name))
-        (eshell 'new)))
-    (with-current-buffer eshell-buf-name
-      (eshell/cd dir)
-      (eshell-reset)))
-  (select-window (get-buffer-window (dired-noselect dir))))
-
-(defun my/bg-process (name dir command &rest args)
-  "Ensure a background process named NAME is running COMMAND in DIR.
-If a process with NAME is already live, does nothing.
-Output goes to a hidden buffer ' *NAME*' (leading space keeps it
-out of the buffer list)."
-  (unless (process-live-p (get-process name))
-    (let ((default-directory dir))
-      (apply #'start-process name (format " *%s*" name) command args)
-      (set-process-query-on-exit-flag (get-process name) nil))))
-#+END_SRC
-
-*** Dotfiles (~C-c o d~)
-
-Opens ~~/dots~ with dired on top and an eshell below.
-
-#+BEGIN_SRC emacs-lisp
-(defun my/open-dotfiles ()
-  "Open a dotfiles workspace: dired on ~/dots, eshell below."
-  (interactive)
-  (my/project-layout (expand-file-name "~/dots") "*eshell:dots*"))
-
-(global-set-key (kbd "C-c o d") #'my/open-dotfiles)
-#+END_SRC
-
-*** Personal Blog (~C-c o b~)
-
-Opens ~~/dox/blog~ with dired on top and an eshell below. Also starts a hidden
-~hugo server~ process in the background so the preview server is running while
-you work. The process is only spawned if it is not already live, so pressing
-~C-c o b~ repeatedly is safe. The Hugo output is accessible in the buffer
-~ *hugo:blog*~ if you need to check for errors.
-
-#+BEGIN_SRC emacs-lisp
-(defun my/open-blog ()
-  "Open the blog workspace: dired + eshell in ~/dox/blog.
-Starts a hidden hugo server process in the background."
-  (interactive)
-  (let ((dir (expand-file-name "~/dox/blog")))
-    (my/project-layout dir "*eshell:blog*")
-    (my/bg-process "hugo:blog" dir "hugo" "server")))
-
-(global-set-key (kbd "C-c o b") #'my/open-blog)
-#+END_SRC
-
-*** Sailing Blog (~C-c o s~)
-
-Opens ~~/dox/clean-rebuild~ with dired on top and an eshell below. Also starts
-a hidden ~hugo server~ process for this project in the background, independent
-of the blog server.
-
-#+BEGIN_SRC emacs-lisp
-(defun my/open-site ()
-  "Open the site workspace: dired + eshell in ~/dox/clean-rebuild.
-Starts a hidden hugo server process in the background."
-  (interactive)
-  (let ((dir (expand-file-name "~/dox/clean-rebuild")))
-    (my/project-layout dir "*eshell:site*")
-    (my/bg-process "hugo:site" dir "hugo" "server")))
-
-(global-set-key (kbd "C-c o s") #'my/open-site)
-#+END_SRC
-
-*** Kill All Hugo Servers (~C-c o k~)
-
-Kills every background process whose name starts with ~hugo:~, regardless of
-which project it belongs to. Useful for a clean shutdown when you are done
-working across multiple projects and don't want to stop them individually.
-
-#+BEGIN_SRC emacs-lisp
-(defun my/stop-all-hugo ()
-  "Kill all background hugo server processes started by project layouts."
-  (interactive)
-  (let ((killed 0))
-    (dolist (proc (process-list))
-      (when (string-prefix-p "hugo:" (process-name proc))
-        (kill-process proc)
-        (cl-incf killed)))
-    (if (zerop killed)
-        (message "No hugo servers were running.")
-      (message "Stopped %d hugo server%s." killed (if (= killed 1) "" "s")))))
-
-(global-set-key (kbd "C-c o k") #'my/stop-all-hugo)
 #+END_SRC
 
 * System Clipboard
@@ -635,10 +454,6 @@ built into Emacs 27+.
 
 ** Terminal (eshell in a bottom split)
 
-I think there is a cleaner way maybe with some plugins or something to have like a quick pop up shell. On the hunt for a better solution.
-
-I am also always doing a lot of repetive CD'ing around so maybe there is a better just use other Emacs ways of doing things to avoid this. 
-
 Opens an eshell in a horizontal split occupying the bottom third of the current
 frame. If an eshell buffer is already open it reuses it rather than opening a
 second one. Pressing ~C-c t~ again from any window closes the eshell split and
@@ -674,49 +489,6 @@ directly — ~C-c x~ is an unoccupied user key in the default bindings.
 
 #+BEGIN_SRC emacs-lisp
 (global-set-key (kbd "C-c x") #'delete-window)
-#+END_SRC
-
-** Close Window
-
-Closes the currently focused split. Emacs' built-in ~delete-window~ is used
-directly — ~C-c x~ is an unoccupied user key in the default bindings.
-
-#+BEGIN_SRC emacs-lisp
-(global-set-key (kbd "C-c x") #'delete-window)
-#+END_SRC
-
-** Window Zoom (toggle fullscreen split)
-
-~C-c f~ toggles the current window between fullscreen and the previous layout,
-similar to tmux's ~prefix-z~. On the first press the current window configuration
-is saved and ~delete-other-windows~ expands the focused window to fill the frame.
-On the second press the saved configuration is restored exactly as it was.
-
-~winner-mode~ is enabled to provide the configuration history that makes this
-possible. It is a built-in minor mode that records window layout changes and is
-also what allows ~C-c <left>~ / ~C-c <right>~ to step through layout history
-manually if you ever want that.
-
-#+BEGIN_SRC emacs-lisp
-(winner-mode 1)
-
-(defvar my/window-zoom--saved-config nil
-  "Saved window configuration before zooming, or nil when not zoomed.")
-
-(defun my/window-zoom-toggle ()
-  "Toggle the current window between fullscreen and the previous layout.
-Works like tmux prefix-z: first press expands, second press restores."
-  (interactive)
-  (if my/window-zoom--saved-config
-      (progn
-        (set-window-configuration my/window-zoom--saved-config)
-        (setq my/window-zoom--saved-config nil)
-        (message "Layout restored."))
-    (setq my/window-zoom--saved-config (current-window-configuration))
-    (delete-other-windows)
-    (message "Window zoomed — C-c f to restore.")))
-
-(global-set-key (kbd "C-c f") #'my/window-zoom-toggle)
 #+END_SRC
 
 ** Zen Mode
@@ -787,6 +559,7 @@ renders as invisible padding rather than a visible grey bar. ~:box nil~ and
 ;; Run once immediately so padding is present before any layout changes occur
 (my/set-window-padding)
 #+END_SRC
+* Language Support: LSP, Typst, LaTeX, Markdown
 
 ** PDF Tools
 
@@ -800,48 +573,247 @@ binary. Most distros need ~libpoppler-glib-dev~ and ~libpoppler-private-dev~
 succeed.
 
 #+BEGIN_SRC emacs-lisp
-;;(use-package pdf-tools
-  ;;:magic ("%PDF" . pdf-view-mode)  ;; open any PDF in pdf-view-mode automatically
-  ;;:config
-  ;;(pdf-tools-install :no-query))   ;; compile epdfinfo silently; no interactive prompt
+(use-package pdf-tools
+  :magic ("%PDF" . pdf-view-mode)  ;; open any PDF in pdf-view-mode automatically
+  :config
+  (pdf-tools-install :no-query))   ;; compile epdfinfo silently; no interactive prompt
 #+END_SRC
 
-* Spell Checking (jinx)
+** Org → PDF Live Preview
 
-~jinx~ is a fast spell checker backed by the system ~enchant-2~ library, which
-in turn delegates to whichever dictionary backend is installed (Hunspell,
-Aspell, Nuspell etc.). It underlines misspelled words lazily as you type and
-provides Vim-style next/previous navigation between errors.
+Side-by-side Org + PDF workflow. ~C-c p o~ opens the preview, ~C-c p s~ stops it.
 
-The only OS dependency is ~enchant-2~ with at least one dictionary. On NixOS:
-
-#+BEGIN_EXAMPLE
-environment.systemPackages = [ pkgs.enchant pkgs.hunspellDicts.en-us ];
-#+END_EXAMPLE
-
-On Debian/Ubuntu: ~sudo apt install enchant-2 hunspell-en-us~.
-On macOS (Homebrew): ~brew install enchant~ (dictionary bundled).
-
-*How it works:*
-- ~C-c s~ toggles ~jinx-mode~ on and off in the current buffer. When active,
-  misspelled words are underlined.
-- ~]s~ jumps to the next misspelled word (mirrors Vim's ~]s~).
-- ~[s~ jumps to the previous misspelled word (mirrors Vim's ~[s~).
-- ~C-c $~ opens a correction menu at point with suggested fixes (the default
-  ~jinx~ correction bind, kept as-is since it does not conflict with anything).
-
-The ~]s~ / ~[s~ bindings are added to ~evil-normal-state-map~ so they behave
-exactly as they do in Vim — available globally whenever Evil is in normal
-state, not just when ~jinx-mode~ is active, so the muscle memory is consistent.
+On every save the org file is re-exported via LaTeX and the PDF view refreshes
+automatically. The LaTeX engine is ~lualatex~ — swap for ~pdflatex~ or ~xelatex~
+in ~org-latex-pdf-process~ if preferred.
 
 #+BEGIN_SRC emacs-lisp
-(use-package jinx
-  :bind
-  (("C-c s"   . jinx-mode)         ;; toggle spell checking in current buffer
-   ("C-c $"   . jinx-correct)      ;; open correction menu at point
-   :map evil-normal-state-map
-   ("]s" . jinx-next)              ;; next misspelling  (Vim ]s)
-   ("[s" . jinx-previous)))        ;; previous misspelling (Vim [s)
+(setq org-latex-pdf-process
+      '("lualatex -interaction nonstopmode -output-directory %o %f"
+        "lualatex -interaction nonstopmode -output-directory %o %f"
+        "lualatex -interaction nonstopmode -output-directory %o %f"))
+
+(defvar-local my/org-pdf-preview-active nil
+  "Non-nil when the live PDF preview is running for this org buffer.")
+
+(defvar-local my/org-pdf-preview--path nil
+  "Cached PDF path for this org buffer, set when preview is opened.")
+
+(defun my/org-pdf-preview--do-revert (pdf-path)
+  "Revert the pdf-tools buffer visiting PDF-PATH if it exists."
+  (let ((pdf-buf (find-buffer-visiting pdf-path)))
+    (when (and pdf-buf (buffer-live-p pdf-buf))
+      (with-current-buffer pdf-buf
+        (pdf-view-revert-buffer nil t)))))
+
+(defun my/org-pdf-preview--do-export (org-buf pdf-path)
+  "Export ORG-BUF to PDF then schedule a revert of PDF-PATH."
+  (when (buffer-live-p org-buf)
+    (with-current-buffer org-buf
+      (org-latex-export-to-pdf nil nil nil nil nil)))
+  (run-with-timer 0.5 nil #'my/org-pdf-preview--do-revert pdf-path))
+
+(defun my/org-pdf-preview-update ()
+  "Re-export the current org buffer to PDF and refresh the pdf-tools window.
+Intended to run on `after-save-hook' (buffer-local)."
+  (when my/org-pdf-preview-active
+    (run-with-timer 0 nil
+                    #'my/org-pdf-preview--do-export
+                    (current-buffer)
+                    my/org-pdf-preview--path)))
+
+(defun my/org-pdf-preview-open ()
+  "Export the current org buffer to PDF and open it in a right-hand split.
+Enables auto-refresh on save for this buffer."
+  (interactive)
+  (unless (buffer-file-name)
+    (user-error "Buffer must be visiting a file before opening PDF preview"))
+  (unless (eq major-mode 'org-mode)
+    (user-error "PDF preview is only available in org-mode buffers"))
+  (let* ((org-buf  (current-buffer))
+         (pdf-path (concat (file-name-sans-extension (buffer-file-name)) ".pdf")))
+    (message "Exporting to PDF…")
+    (org-latex-export-to-pdf nil nil nil nil nil)
+    (unless (file-exists-p pdf-path)
+      (user-error "PDF export failed — check *Messages* for LaTeX errors"))
+    (setq my/org-pdf-preview--path pdf-path)
+    ;; Re-fetch the org window AFTER export — the export process can shift
+    ;; which window is selected, making any pre-captured org-win stale.
+    (let* ((org-win (get-buffer-window org-buf))
+           (pdf-buf (or (find-buffer-visiting pdf-path)
+                        (find-file-noselect pdf-path)))
+           (pdf-win (get-buffer-window pdf-buf)))
+      (if pdf-win
+          (with-current-buffer pdf-buf
+            (pdf-view-revert-buffer nil t))
+        (let ((new-win (split-window org-win nil 'right)))
+          (set-window-buffer new-win pdf-buf)))
+      (select-window org-win))
+    (setq my/org-pdf-preview-active t)
+    (add-hook 'after-save-hook #'my/org-pdf-preview-update nil t)
+    (message "PDF preview active — saving will auto-refresh.")))
+
+(defun my/org-pdf-preview-stop ()
+  "Disable the live PDF preview and close the PDF window."
+  (interactive)
+  (setq my/org-pdf-preview-active nil)
+  (remove-hook 'after-save-hook #'my/org-pdf-preview-update t)
+  (when my/org-pdf-preview--path
+    (let ((pdf-win (get-buffer-window
+                    (find-buffer-visiting my/org-pdf-preview--path))))
+      (when pdf-win
+        (delete-window pdf-win))))
+  (message "PDF preview stopped."))
+
+(with-eval-after-load 'org
+  (define-key org-mode-map (kbd "C-c p o") #'my/org-pdf-preview-open)
+  (define-key org-mode-map (kbd "C-c p s") #'my/org-pdf-preview-stop))
+#+END_SRC
+
+** Typst Major Mode
+
+~typst-mode~ provides syntax highlighting and indentation for ~.typ~ files
+using standard regex-based font-lock. It has zero OS dependencies — no
+tree-sitter grammar, no compiler, no binary download.
+
+It is not on MELPA, so it is installed via ~straight.el~ directly from its
+GitHub repository. This is one of straight's core strengths over ~package.el~
+— any Git-hosted package works without needing a separate registry entry.
+
+#+BEGIN_SRC emacs-lisp
+(use-package typst-mode
+  :straight (:host github :repo "Ziqi-Yang/typst-mode.el")
+  :mode ("\\.typ\\'" . typst-mode))
+#+END_SRC
+
+** Typst → PDF Live Preview
+
+The architecture here differs from the Org/LaTeX preview because Typst has
+~typst watch~ built into its CLI: a single long-running background process that
+recompiles the document automatically on every file change, typically in under
+a second. There is no need to hook into ~after-save-hook~ and trigger a
+compilation manually — Typst handles that side entirely.
+
+What Emacs does:
+- ~my/typst-preview-open~ spawns ~typst watch <file>~ as a background process,
+  splits the frame, and opens the PDF on the right.
+- A buffer-local idle timer polls the PDF file's modification time once per
+  second. When it detects the file has been updated on disk (meaning Typst
+  finished a compile), it calls ~pdf-view-revert-buffer~ to refresh the view.
+- ~my/typst-preview-stop~ kills the ~typst watch~ process, cancels the timer,
+  and closes the PDF window.
+
+The only OS dependency is the ~typst~ binary on ~$PATH~. On NixOS this is
+~programs.typst.enable = true;~ or ~environment.systemPackages = [ pkgs.typst ];~
+in your system config. On any other machine it is a single binary with no
+runtime dependencies.
+
+*Keybinds (active only inside ~typst-ts-mode~ buffers):*
+- ~C-c p o~ — open the live preview split
+- ~C-c p s~ — stop the preview and close the PDF window
+
+#+BEGIN_SRC emacs-lisp
+(defvar-local my/typst-watch-process nil
+  "The running `typst watch' process for this buffer, or nil.")
+
+(defvar-local my/typst-poll-timer nil
+  "The idle timer that polls the PDF modification time for this buffer.")
+
+(defvar-local my/typst-pdf-last-mtime nil
+  "Modification time of the PDF the last time the poll timer ran.")
+
+(defun my/typst-preview--pdf-path ()
+  "Return the expected PDF output path for the current Typst buffer."
+  (concat (file-name-sans-extension (buffer-file-name)) ".pdf"))
+
+(defun my/typst-preview--poll (org-buf pdf-path)
+  "Check if the PDF at PDF-PATH has been updated and refresh if so.
+Intended to be called by the buffer-local poll timer."
+  (when (and (buffer-live-p org-buf)
+             (file-exists-p pdf-path))
+    (let ((mtime (file-attribute-modification-time
+                  (file-attributes pdf-path))))
+      (with-current-buffer org-buf
+        (when (not (equal mtime my/typst-pdf-last-mtime))
+          (setq my/typst-pdf-last-mtime mtime)
+          ;; Revert the PDF buffer if it is visible in any window.
+          (let ((pdf-buf (find-buffer-visiting pdf-path)))
+            (when (and pdf-buf (buffer-live-p pdf-buf))
+              (with-current-buffer pdf-buf
+                (pdf-view-revert-buffer nil t)))))))))
+
+(defun my/typst-preview-open ()
+  "Start `typst watch', open the output PDF in a right-hand split,
+and begin polling for updates. Focus remains on the Typst source buffer."
+  (interactive)
+  (unless (buffer-file-name)
+    (user-error "Buffer must be visiting a file before opening Typst preview"))
+  (unless (eq major-mode 'typst-mode)
+    (user-error "Typst preview is only available in typst-mode buffers"))
+  (unless (executable-find "typst")
+    (user-error "typst binary not found on $PATH — install Typst first"))
+  ;; Kill any existing watch process for this buffer before starting a new one.
+  (my/typst-preview-stop)
+  (let* ((typ-file  (buffer-file-name))
+         (pdf-path  (my/typst-preview--pdf-path))
+         (src-buf   (current-buffer))
+         (proc-name (format "typst-watch:%s" (buffer-name)))
+         (proc-buf  (format " *typst-watch:%s*" (buffer-name))))
+    ;; Spawn `typst watch' as a background process. Output goes to a hidden
+    ;; buffer so compilation errors are accessible if needed.
+    (setq my/typst-watch-process
+          (start-process proc-name proc-buf "typst" "watch" typ-file))
+    (set-process-query-on-exit-flag my/typst-watch-process nil)
+    ;; Wait briefly for the initial compile before opening the PDF.
+    (message "Waiting for initial Typst compile…")
+    (sleep-for 1.5)
+    (unless (file-exists-p pdf-path)
+      ;; If the PDF still doesn't exist, wait a little longer.
+      (sleep-for 1.5))
+    (unless (file-exists-p pdf-path)
+      (my/typst-preview-stop)
+      (user-error "Typst compile failed — check buffer %s for errors" proc-buf))
+    ;; Open the PDF in a right-hand split.
+    (let ((existing-pdf-win (get-buffer-window (find-buffer-visiting pdf-path))))
+      (if existing-pdf-win
+          (select-window existing-pdf-win)
+        (select-window (split-window-right))
+        (find-file pdf-path)))
+    ;; Return focus to the source buffer on the left.
+    (select-window (get-buffer-window src-buf))
+    ;; Start the poll timer: check for PDF changes every second.
+    (setq my/typst-pdf-last-mtime
+          (file-attribute-modification-time (file-attributes pdf-path)))
+    (setq my/typst-poll-timer
+          (run-with-timer 1 1
+                          #'my/typst-preview--poll src-buf pdf-path))
+    (message "Typst preview active — edit and save to see live updates.")))
+
+(defun my/typst-preview-stop ()
+  "Stop `typst watch', cancel the poll timer, and close the PDF window."
+  (interactive)
+  ;; Cancel the poll timer.
+  (when (timerp my/typst-poll-timer)
+    (cancel-timer my/typst-poll-timer)
+    (setq my/typst-poll-timer nil))
+  ;; Kill the typst watch process.
+  (when (process-live-p my/typst-watch-process)
+    (kill-process my/typst-watch-process)
+    (setq my/typst-watch-process nil))
+  ;; Close the PDF window if visible.
+  (let ((pdf-path (and (buffer-file-name)
+                       (my/typst-preview--pdf-path))))
+    (when pdf-path
+      (let ((pdf-win (get-buffer-window (find-buffer-visiting pdf-path))))
+        (when pdf-win
+          (delete-window pdf-win)))))
+  (message "Typst preview stopped."))
+
+;; Bind within typst-mode-map so C-c p o/s only exist in Typst buffers
+;; and mirror the same mnemonic as the org preview keybinds.
+(with-eval-after-load 'typst-mode
+  (define-key typst-mode-map (kbd "C-c p o") #'my/typst-preview-open)
+  (define-key typst-mode-map (kbd "C-c p s") #'my/typst-preview-stop))
 #+END_SRC
 
 * Silence
@@ -854,4 +826,3 @@ speaker or flash the frame depending on the desktop environment.
 (setq ring-bell-function 'ignore)  ;; disable audible bell entirely
 (setq visible-bell nil)            ;; disable the visual flash fallback
 #+END_SRC
-
