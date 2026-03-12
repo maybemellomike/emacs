@@ -1,8 +1,11 @@
 #+TITLE: My Emacs Configuration
 #+AUTHOR: Liam
 #+DESCRIPTION: No, I don't know too much whats happening here but hey something's at least happening
-
 #+PROPERTY: header-args :tangle config.el
+
+* Goals
+
+Mainly used for dotfile editing and writing prose, I've used a mainly terminal based workflow and Vim with heavy reliance on my window manager for years and years. Really giving Emacs a go here as I'd like to have at least some experience with it as it is quite a force in the space but is based around a very different way of thinking about things.
 
 * Straight.el and use-package
 
@@ -168,7 +171,7 @@ Non LSP based completion that works in all buffers. Popular package that leverag
   (use-package corfu
     :custom
     (corfu-auto t)           ;; show popup automatically without pressing TAB
-    (corfu-auto-delay 0.2)   ;; seconds before popup appears
+    (corfu-auto-delay 0.1)   ;; seconds before popup appears
     (corfu-auto-prefix 2)    ;; minimum characters before popup triggers
     (corfu-cycle t)          ;; wrap around at top/bottom of candidate list
     (corfu-quit-no-match t)  ;; hide popup if nothing matches
