@@ -436,19 +436,24 @@ Other coloured elements:
 
 * Text Wrapping / Word-Processor Behavior
 #+BEGIN_SRC emacs-lisp
-(defun my/text-mode-line-wrapping ()
-  "Enable word-wrapping like a word processor."
-  (visual-line-mode 1)
-  (setq truncate-lines nil))
-  ;; Optional: uncomment for hard breaks
-  ;; (setq fill-column 80)
-  ;; (auto-fill-mode 1)
+  (defun my/text-mode-line-wrapping ()
+    "Enable word-wrapping like a word processor."
+    (visual-line-mode 1)
+    (setq truncate-lines nil))
+    ;; Optional: uncomment for hard breaks
+    ;; (setq fill-column 80)
+    ;; (auto-fill-mode 1)
 
+  (dolist (hook '(typst-mode-hook
+                  org-mode-hook
+                  markdown-mode-hook
+                  latex-mode-hook))
+    (add-hook hook #'my/text-mode-line-wrapping))
 (dolist (hook '(typst-mode-hook
-                org-mode-hook
                 markdown-mode-hook
-                latex-mode-hook))
-  (add-hook hook #'my/text-mode-line-wrapping))
+                latex-mode-hook
+                LaTeX-mode-hook))
+  (add-hook hook #'variable-pitch-mode))
 #+END_SRC
 
 * Shrink Path
