@@ -1491,3 +1491,41 @@ from that repository.
 (with-eval-after-load 'evil
   (evil-define-key 'normal 'global (kbd "<leader>gd") #'my/sync-dotfiles))
 #+END_SRC
+
+*** NixOS Rebuild (~SPC f d r~)
+
+~SPC f d r~ opens a split below, ~cd~'s into ~~/dots/~, and runs
+~doas nixos-rebuild test --flake .~ so the password prompt and build
+output are visible as they stream in. The split reuses an existing
+~*nixos-rebuild*~ eshell buffer if one is already open.
+
+#+BEGIN_SRC emacs-lisp
+(defun my/nixos-rebuild ()
+  "Run 'doas nixos-rebuild test --flake .' in ~/dots/ in a bottom split."
+  (interactive)
+  (let* ((buf-name "*nixos-rebuild*")
+         (dots-dir (expand-file-name "~/dots/"))
+         (existing-win (get-buffer-window buf-name))
+         (total-height (frame-height))
+         (shell-height (max 15 (/ total-height 3))))
+    ;; Close existing window if open so we get a fresh run
+    (when existing-win
+      (delete-window existing-win))
+    ;; Kill old buffer so eshell starts clean
+    (when (get-buffer buf-name)
+      (kill-buffer buf-name))
+    ;; Open the split at the bottom third
+    (let* ((new-win (split-window-below (- total-height shell-height)))
+           (eshell-buffer-name buf-name))
+      (select-window new-win)
+      (eshell 'new)
+      ;; cd into ~/dots/ and run the rebuild command
+      (with-current-buffer buf-name
+        (eshell/cd dots-dir)
+        (eshell-return-to-prompt)
+        (insert "doas nixos-rebuild test --flake .")
+        (eshell-send-input)))))
+
+(with-eval-after-load 'evil
+  (evil-define-key 'normal 'global (kbd "<leader>gr") #'my/nixos-rebuild))
+#+END_SRC
