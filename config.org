@@ -118,28 +118,31 @@ The keys to a stable gutter width are:
    appending to the hook (the ~t~ argument to ~add-hook~) so it runs last.
 
 #+BEGIN_SRC emacs-lisp
-(setq-default display-line-numbers-type 'relative)
-(setq-default display-line-numbers-width 4)  ;; 4 = 3 digit columns + 1 padding so
-                                              ;; two-digit numbers never reflow the gutter
-(setq-default display-line-numbers-right-justify t) ;; right-align numbers so the text
-                                                     ;; body stays anchored as digits change
-(global-display-line-numbers-mode t)
+  (setq-default display-line-numbers-type 'relative)
+  (setq-default display-line-numbers-width 4)  ;; 4 = 3 digit columns + 1 padding so
+                                                ;; two-digit numbers never reflow the gutter
+  (setq-default display-line-numbers-right-justify t) ;; right-align numbers so the text
+                                                       ;; body stays anchored as digits change
+  (global-display-line-numbers-mode t)
 
-(dolist (mode '(term-mode-hook
-                shell-mode-hook
-                eshell-mode-hook
-                vterm-mode-hook
-                treemacs-mode-hook
-                minibuffer-setup-hook))
-  (add-hook mode (lambda () (display-line-numbers-mode 0))))
+  (dolist (mode '(term-mode-hook
+                  shell-mode-hook
+                  eshell-mode-hook
+                  vterm-mode-hook
+                  treemacs-mode-hook
+                  minibuffer-setup-hook))
+    (add-hook mode (lambda () (display-line-numbers-mode 0))))
 
-;; Re-assert fixed gutter width in org-mode AFTER variable-pitch-mode fires.
-;; The trailing `t` appends this hook so it runs after all others on the hook list.
-(add-hook 'org-mode-hook
-          (lambda ()
-            (setq-local display-line-numbers-width 4)
-            (setq-local display-line-numbers-width-start nil))
-          t)
+  ;; Re-assert fixed gutter width in org-mode AFTER variable-pitch-mode fires.
+  ;; The trailing `t` appends this hook so it runs after all others on the hook list.
+  (add-hook 'org-mode-hook
+            (lambda ()
+              (setq-local display-line-numbers-width 4)
+              (setq-local display-line-numbers-width-start nil))
+            t)
+(custom-set-faces
+ '(line-number               ((t (:inherit fixed-pitch))))
+ '(line-number-current-line  ((t (:inherit fixed-pitch)))))
 #+END_SRC
 
 * Evil
@@ -159,7 +162,7 @@ The keys to a stable gutter width are:
 
 * Corfu Completion
 
-Non LSP based completion that works in all buffers. Popular package that leverages built in things Emacs is already doing. 
+Non LSP based completion that works in all buffers. Popular package that leverages built in things Emacs is already doing.  
 
 #+BEGIN_SRC emacs-lisp
   (use-package corfu
