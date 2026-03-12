@@ -53,9 +53,15 @@ exists.
 
 * UI Cleanup
 #+BEGIN_SRC emacs-lisp
-(tool-bar-mode -1)
-(menu-bar-mode -1)
-(scroll-bar-mode -1)
+  (tool-bar-mode -1)
+  (menu-bar-mode -1)
+  (scroll-bar-mode -1)
+;; scroll one line at a time rather than jumping half a page
+(setq scroll-step 1)
+(setq scroll-conservatively 101)  ;; any value > 100 means "never jump"
+
+;; keep 5 lines visible above/below the cursor at all times (scrolloff)
+(setq scroll-margin 5)
 #+END_SRC
 
 ** Mode Line (doom-modeline)
