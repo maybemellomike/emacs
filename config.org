@@ -4,7 +4,9 @@
 
 #+PROPERTY: header-args :tangle config.el
 
-* Bootstrap: straight.el + use-package
+* Straight.el and use-package
+
+In the hopes of keeping this relatively portable I've read that using straight.el helps. 
 
 ~straight.el~ is a declarative, reproducible package manager that clones
 packages directly from their source repositories (Git) rather than downloading
@@ -52,6 +54,9 @@ exists.
 #+END_SRC
 
 * UI Cleanup
+
+Some clean up or behavior things which are more or less built in settings I just prefer this way over another.
+
 #+BEGIN_SRC emacs-lisp
   (tool-bar-mode -1)
   (menu-bar-mode -1)
@@ -59,7 +64,6 @@ exists.
 ;; scroll one line at a time rather than jumping half a page
 (setq scroll-step 1)
 (setq scroll-conservatively 101)  ;; any value > 100 means "never jump"
-
 ;; keep 5 lines visible above/below the cursor at all times (scrolloff)
 (setq scroll-margin 5)
 #+END_SRC
@@ -155,7 +159,12 @@ The keys to a stable gutter width are:
 
 * Undo
 #+BEGIN_SRC emacs-lisp
-(use-package undo-fu)
+    (use-package undo-fu)
+  (use-package which-key
+    :config
+    (which-key-mode 1)
+    :custom
+    (which-key-idle-delay 0.3))
 #+END_SRC
 
 * Telescope-like Fuzzy Finder
@@ -602,7 +611,26 @@ renders as invisible padding rather than a visible grey bar. ~:box nil~ and
 ;; Run once immediately so padding is present before any layout changes occur
 (my/set-window-padding)
 #+END_SRC
-* Language Support: LSP, Typst, LaTeX, Markdown
+
+* Spell Checking (jinx)
+
+~jinx~ is a fast spell checker backed by the system ~enchant-2~ library.
+
+- ~C-c s~ toggles ~jinx-mode~ on and off in the current buffer
+- ~]s~ / ~[s~ jump to next/previous misspelling (mirrors Vim)
+- ~C-c $~ opens a correction menu at point
+
+On NixOS: ~environment.systemPackages = [ pkgs.enchant pkgs.hunspellDicts.en-us ];~
+
+#+BEGIN_SRC emacs-lisp
+(use-package jinx
+  :bind
+  (("C-c s"   . jinx-mode)
+   ("C-c $"   . jinx-correct)
+   :map evil-normal-state-map
+   ("]s" . jinx-next)
+   ("[s" . jinx-previous)))
+#+END_SRC
 
 ** PDF Tools
 
@@ -877,8 +905,8 @@ touched until you explicitly save."
   (message "Typst preview stopped."))
 
 (with-eval-after-load 'typst-mode
-  (define-key typst-mode-map (kbd "C-c C-v p") #'my/typst-preview-open)
-  (define-key typst-mode-map (kbd "C-c C-v s") #'my/typst-preview-stop))
+  (define-key typst-mode-map (kbd "C-c C-x p") #'my/typst-preview-open)
+  (define-key typst-mode-map (kbd "C-c C-x s") #'my/typst-preview-stop))
 #+END_SRC
 
   (define-key typst-mode-map (kbd "C-c C-x p") #'my/typst-preview-open)
