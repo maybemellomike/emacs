@@ -37,3 +37,7 @@ This was way more fiddly than I'd've liked but hey it's somehow working now for 
 **** Typst
 
 The same works for typst documents with the same keybindings. Typst though being faster is setup such that it just works live as you go! It builds a background tmp file which is deleted later and essentially just saves 4 times a second lol. There's gotta be a better way, let me know haha. C-c C-x s also stops this process. 
+
+** Window Management?
+
+Realizing Emacs was sort of made pre the era of like fancy graphical interfaces this part seems a bit funny now but I'm actually sorta liking how I have this setup. I have a focus change with C-c then hjkl to move where the active pane is, then C-c m + hjkl will move your active pane in that direction. Otherwise the standard confusing Emacs binds are true with C-x 3 to split vertically, 0 closes it, and so on. 

@@ -639,24 +639,35 @@ renders as invisible padding rather than a visible grey bar. ~:box nil~ and
 (my/set-window-padding)
 #+END_SRC
 
-* Spell Checking (jinx)
+* Spell Checking (flyspell)
 
-~jinx~ is a fast spell checker backed by the system ~enchant-2~ library.
+~flyspell~ is a spell checker built into Emacs — no compilation or external
+Emacs packages required. It delegates to whichever spell program is available
+on the system (~hunspell~, ~aspell~, or ~ispell~). On NixOS add ~pkgs.hunspell~
+and ~pkgs.hunspellDicts.en-us~ to your system packages; on most other distros
+hunspell is available via the package manager.
 
-- ~C-c s~ toggles ~jinx-mode~ on and off in the current buffer
-- ~]s~ / ~[s~ jump to next/previous misspelling (mirrors Vim)
+~flyspell-mode~ underlines misspelled words as you type in text buffers.
+~flyspell-prog-mode~ checks only comments and strings in code buffers.
+
+- ~C-c s~ toggles ~flyspell-mode~ in the current buffer
 - ~C-c $~ opens a correction menu at point
-
-On NixOS: ~environment.systemPackages = [ pkgs.enchant pkgs.hunspellDicts.en-us ];~
+- ~]s~ / ~[s~ jump to next/previous misspelling (mirrors Vim ~]s~ / ~[s~)
 
 #+BEGIN_SRC emacs-lisp
-(use-package jinx
+(use-package flyspell
+  :straight (:type built-in)
+  :custom
+(setq ispell-dictionary "en_US"
+      ispell-local-dictionary "en_US"
+      ispell-local-dictionary-alist
+      '(("en_US" "[[:alpha:]]" "[^[:alpha:]]" "[']" nil ("-d" "en_US") nil utf-8)))
   :bind
-  (("C-c s"   . jinx-mode)
-   ("C-c $"   . jinx-correct)
+  (("C-c s" . flyspell-mode)
+   ("C-c $" . flyspell-correct-word-before-point)
    :map evil-normal-state-map
-   ("]s" . jinx-next)
-   ("[s" . jinx-previous)))
+   ("]s" . flyspell-goto-next-error)
+   ("[s" . evil-prev-flyspell-error)))
 #+END_SRC
 
 ** PDF Tools
