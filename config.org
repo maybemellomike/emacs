@@ -1315,6 +1315,28 @@ Starts a hidden hugo server process in the background."
 (global-set-key (kbd "C-c o s") #'my/open-site)
 #+END_SRC
 
+**** Kill Hugo Servers (~C-c o k~)
+
+Kills all background Hugo server processes started by the project layout
+functions. Searches for any live process whose name begins with ~hugo:~ and
+kills it, so all projects are cleared in one shot regardless of how many are
+running.
+
+#+BEGIN_SRC emacs-lisp
+(defun my/kill-hugo-servers ()
+  "Kill all background hugo server processes started by project layouts."
+  (interactive)
+  (let ((killed 0))
+    (dolist (proc (process-list))
+      (when (string-prefix-p "hugo:" (process-name proc))
+        (kill-process proc)
+        (setq killed (1+ killed))))
+    (if (zerop killed)
+        (message "No hugo servers were running.")
+      (message "Killed %d hugo server(s)." killed))))
+
+(global-set-key (kbd "C-c o k") #'my/kill-hugo-servers)
+#+END_SRC
 
 * Spacemacs like Keybinds
 
