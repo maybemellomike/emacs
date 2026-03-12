@@ -190,7 +190,7 @@ matching, ~marginalia~ adds annotations, and ~consult~ provides the search comma
   :custom
   (custom-safe-themes t)
   :config
-  (load-theme 'doom-gruvbox t))
+  (load-theme 'doom-tomorrow-night t))
 #+END_SRC
 
 ** Theme Toggle
@@ -208,57 +208,57 @@ to the user — we re-apply it explicitly after each toggle via
 tinted background on both dark and light themes rather than a jarring mismatch.
 
 #+BEGIN_SRC emacs-lisp
-(use-package ef-themes
-  :custom
-  (custom-safe-themes t))
+  (use-package ef-themes
+    :custom
+    (custom-safe-themes t))
 
-(defvar my/dark-theme  'doom-gruvbox
-  "The dark theme to use in `my/toggle-theme'.")
+  (defvar my/dark-theme  'doom-tomorrow-night
+    "The dark theme to use in `my/toggle-theme'.")
 
-(defvar my/light-theme 'ef-cyprus
-  "The light theme to use in `my/toggle-theme'.")
+  (defvar my/light-theme 'ef-cyprus
+    "The light theme to use in `my/toggle-theme'.")
 
-(defvar my/current-theme 'dark
-  "Tracks which theme is active: the symbol `dark' or `light'.")
+  (defvar my/current-theme 'dark
+    "Tracks which theme is active: the symbol `dark' or `light'.")
 
-(defun my/apply-org-theme-faces ()
-  "Re-apply org code-block faces to match the currently active theme.
-Called after every theme switch so blocks never inherit stale colours."
-  (if (eq my/current-theme 'dark)
-      ;; Dark theme — monokai-flavoured block colours
+  (defun my/apply-org-theme-faces ()
+    "Re-apply org code-block faces to match the currently active theme.
+  Called after every theme switch so blocks never inherit stale colours."
+    (if (eq my/current-theme 'dark)
+        ;; Dark theme — monokai-flavoured block colours
+        (custom-set-faces
+         '(org-block            ((t (:inherit fixed-pitch :background "#2d2d2d"))))
+         '(org-block-begin-line ((t (:inherit fixed-pitch :foreground "#aaaaaa" :background "#2d2d2d"))))
+         '(org-block-end-line   ((t (:inherit fixed-pitch :foreground "#aaaaaa" :background "#2d2d2d"))))
+         '(org-code             ((t (:inherit fixed-pitch :foreground "#A6E22E")))))
+      ;; Light theme — ef-cyprus uses warm off-whites; a pale grey block reads cleanly
       (custom-set-faces
-       '(org-block            ((t (:inherit fixed-pitch :background "#2d2d2d"))))
-       '(org-block-begin-line ((t (:inherit fixed-pitch :foreground "#aaaaaa" :background "#2d2d2d"))))
-       '(org-block-end-line   ((t (:inherit fixed-pitch :foreground "#aaaaaa" :background "#2d2d2d"))))
-       '(org-code             ((t (:inherit fixed-pitch :foreground "#A6E22E")))))
-    ;; Light theme — ef-cyprus uses warm off-whites; a pale grey block reads cleanly
-    (custom-set-faces
-     '(org-block            ((t (:inherit fixed-pitch :background "#eef0e8"))))
-     '(org-block-begin-line ((t (:inherit fixed-pitch :foreground "#888c80" :background "#eef0e8"))))
-     '(org-block-end-line   ((t (:inherit fixed-pitch :foreground "#888c80" :background "#eef0e8"))))
-     '(org-code             ((t (:inherit fixed-pitch :foreground "#3a5f00")))))))
+       '(org-block            ((t (:inherit fixed-pitch :background "#eef0e8"))))
+       '(org-block-begin-line ((t (:inherit fixed-pitch :foreground "#888c80" :background "#eef0e8"))))
+       '(org-block-end-line   ((t (:inherit fixed-pitch :foreground "#888c80" :background "#eef0e8"))))
+       '(org-code             ((t (:inherit fixed-pitch :foreground "#3a5f00")))))))
 
-(defun my/toggle-theme ()
-  "Toggle between `my/dark-theme' and `my/light-theme'."
-  (interactive)
-  (if (eq my/current-theme 'dark)
+  (defun my/toggle-theme ()
+    "Toggle between `my/dark-theme' and `my/light-theme'."
+    (interactive)
+    (if (eq my/current-theme 'dark)
+        (progn
+          (mapc #'disable-theme custom-enabled-themes)
+          (load-theme my/light-theme t)
+          (setq my/current-theme 'light)
+          (my/apply-org-theme-faces)
+          (message "Switched to light theme: %s" my/light-theme))
       (progn
         (mapc #'disable-theme custom-enabled-themes)
-        (load-theme my/light-theme t)
-        (setq my/current-theme 'light)
+        (load-theme my/dark-theme t)
+        (setq my/current-theme 'dark)
         (my/apply-org-theme-faces)
-        (message "Switched to light theme: %s" my/light-theme))
-    (progn
-      (mapc #'disable-theme custom-enabled-themes)
-      (load-theme my/dark-theme t)
-      (setq my/current-theme 'dark)
-      (my/apply-org-theme-faces)
-      (message "Switched to dark theme: %s" my/dark-theme))))
+        (message "Switched to dark theme: %s" my/dark-theme))))
 
-;; Apply the correct faces for the initial dark theme on startup
-(my/apply-org-theme-faces)
+  ;; Apply the correct faces for the initial dark theme on startup
+  (my/apply-org-theme-faces)
 
-(global-set-key (kbd "C-c T") #'my/toggle-theme)
+  (global-set-key (kbd "C-c T") #'my/toggle-theme)
 #+END_SRC
 
 * Icons
