@@ -177,57 +177,59 @@ to the user — we re-apply it explicitly after each toggle via
 tinted background on both dark and light themes rather than a jarring mismatch.
 
 #+BEGIN_SRC emacs-lisp
-  (use-package ef-themes
-    :custom
-    (custom-safe-themes t))
+(use-package ef-themes
+  :custom
+  (custom-safe-themes t))
 
-  (defvar my/dark-theme  'doom-tomorrow-night
-    "The dark theme to use in `my/toggle-theme'.")
+(defvar my/dark-theme  'doom-tomorrow-night
+  "The dark theme to use in `my/toggle-theme'.")
 
-  (defvar my/light-theme 'ef-cyprus
-    "The light theme to use in `my/toggle-theme'.")
+(defvar my/light-theme 'ef-cyprus
+  "The light theme to use in `my/toggle-theme'.")
 
-  (defvar my/current-theme 'dark
-    "Tracks which theme is active: the symbol `dark' or `light'.")
+(defvar my/current-theme 'dark
+  "Tracks which theme is active: the symbol `dark' or `light'.")
 
 (defun my/apply-org-theme-faces ()
   "Re-apply org code-block faces relative to the active theme background.
-Called after every theme switch so blocks always contrast correctly
-without hardcoded colours."
-  (let* ((bg      (face-background 'default nil t))
-         (block-bg (if (eq my/current-theme 'dark)
-                       (color-darken-name bg 4)
-                     (color-darken-name bg 3)))
-         (comment (if (eq my/current-theme 'dark) "#888888" "#999988")))
-    (custom-set-faces
-     `(org-block            ((t (:inherit fixed-pitch :background ,block-bg))))
-     `(org-block-begin-line ((t (:inherit fixed-pitch :foreground ,comment
-                                 :background ,block-bg))))
-     `(org-block-end-line   ((t (:inherit fixed-pitch :foreground ,comment
-                                 :background ,block-bg))))
-     `(org-code             ((t (:inherit fixed-pitch)))))))
+Skips safely when no real color is available (e.g. daemon startup)."
+  (let* ((bg (face-background 'default nil t)))
+    (when (and bg
+               (not (string= bg "unspecified-bg"))
+               (not (string= bg "unspecified-fg")))
+      (let* ((block-bg (if (eq my/current-theme 'dark)
+                           (color-darken-name bg 4)
+                         (color-darken-name bg 3)))
+             (comment (if (eq my/current-theme 'dark) "#888888" "#999988")))
+        (custom-set-faces
+         `(org-block            ((t (:inherit fixed-pitch :background ,block-bg))))
+         `(org-block-begin-line ((t (:inherit fixed-pitch :foreground ,comment
+                                     :background ,block-bg))))
+         `(org-block-end-line   ((t (:inherit fixed-pitch :foreground ,comment
+                                     :background ,block-bg))))
+         `(org-code             ((t (:inherit fixed-pitch)))))))))
 
-  (defun my/toggle-theme ()
-    "Toggle between `my/dark-theme' and `my/light-theme'."
-    (interactive)
-    (if (eq my/current-theme 'dark)
-        (progn
-          (mapc #'disable-theme custom-enabled-themes)
-          (load-theme my/light-theme t)
-          (setq my/current-theme 'light)
-          (my/apply-org-theme-faces)
-          (message "Switched to light theme: %s" my/light-theme))
+;; Apply org faces once a real graphical frame is available
+(add-hook 'server-after-make-frame-hook #'my/apply-org-theme-faces)
+
+(defun my/toggle-theme ()
+  "Toggle between `my/dark-theme' and `my/light-theme'."
+  (interactive)
+  (if (eq my/current-theme 'dark)
       (progn
         (mapc #'disable-theme custom-enabled-themes)
-        (load-theme my/dark-theme t)
-        (setq my/current-theme 'dark)
+        (load-theme my/light-theme t)
+        (setq my/current-theme 'light)
         (my/apply-org-theme-faces)
-        (message "Switched to dark theme: %s" my/dark-theme))))
+        (message "Switched to light theme: %s" my/light-theme))
+    (progn
+      (mapc #'disable-theme custom-enabled-themes)
+      (load-theme my/dark-theme t)
+      (setq my/current-theme 'dark)
+      (my/apply-org-theme-faces)
+      (message "Switched to dark theme: %s" my/dark-theme))))
 
-  ;; Apply the correct faces for the initial dark theme on startup
-  (my/apply-org-theme-faces)
-
-  (global-set-key (kbd "C-c T") #'my/toggle-theme)
+(global-set-key (kbd "C-c T") #'my/toggle-theme)
 #+END_SRC
 
 * Dired / Dirvish
@@ -498,7 +500,7 @@ Other coloured elements:
 * Zen Mode (olivetti — no fullscreen)
 #+BEGIN_SRC emacs-lisp
 (use-package olivetti
-  :commands olivetti-mode
+  :ensure t
   :init
   (defun my/zen-mode ()
     "Toggle a distraction-free writing mode without fullscreening Emacs."
@@ -509,11 +511,14 @@ Other coloured elements:
           (display-line-numbers-mode 1))
       (progn
         (olivetti-mode 1)
-        (olivetti-set-width 88)
-        (display-line-numbers-mode 0))))
+        (olivetti-set-width 80)
+        (display-line-numbers-mode 0)
+        (run-with-timer 0.1 nil
+                        (lambda (win)
+                          (olivetti-set-window win))
+                        (selected-window)))))
   :bind
   ("C-c z" . my/zen-mode))
-
 ;; Auto-enable zen mode in writing modes.
 ;; These are added via add-hook rather than use-package :hook because
 ;; AUCTeX's LaTeX-mode is a derived mode that receives arguments during
