@@ -766,36 +766,6 @@ renders as invisible padding rather than a visible grey bar. ~:box nil~ and
 (my/set-window-padding)
 #+END_SRC
 
-* Spell Checking (flyspell)
-
-~flyspell~ is a spell checker built into Emacs — no compilation or external
-Emacs packages required. It delegates to whichever spell program is available
-on the system (~hunspell~, ~aspell~, or ~ispell~). On NixOS add ~pkgs.hunspell~
-and ~pkgs.hunspellDicts.en-us~ to your system packages; on most other distros
-hunspell is available via the package manager.
-
-~flyspell-mode~ underlines misspelled words as you type in text buffers.
-~flyspell-prog-mode~ checks only comments and strings in code buffers.
-
-- ~C-c s~ toggles ~flyspell-mode~ in the current buffer
-- ~C-c $~ opens a correction menu at point
-- ~]s~ / ~[s~ jump to next/previous misspelling (mirrors Vim ~]s~ / ~[s~)
-
-#+BEGIN_SRC emacs-lisp
-(use-package flyspell
-  :straight (:type built-in)
-  :custom
-(setq ispell-dictionary "en_US"
-      ispell-local-dictionary "en_US"
-      ispell-local-dictionary-alist
-      '(("en_US" "[[:alpha:]]" "[^[:alpha:]]" "[']" nil ("-d" "en_US") nil utf-8)))
-  :bind
-  (("C-c s" . flyspell-mode)
-   ("C-c $" . flyspell-correct-word-before-point)
-   :map evil-normal-state-map
-   ("]s" . flyspell-goto-next-error)
-   ("[s" . evil-prev-flyspell-error)))
-#+END_SRC
 
 ** PDF Tools
 
@@ -1509,7 +1479,7 @@ for fuzzy matching.
     (evil-define-key 'normal 'global (kbd "<leader>bk") #'kill-buffer)
     (evil-define-key 'normal 'global (kbd "<leader>bn") #'next-buffer)
     (evil-define-key 'normal 'global (kbd "<leader>bs") #'mode-line-other-buffer)
-    (evil-define-key 'normal 'global (kbd "<leader>wk") #'my/kill-buffer-and-window)
+    (evil-define-key 'normal 'global (kbd "<leader>wc") #'my/kill-buffer-and-window)
     (evil-define-key 'normal 'global (kbd "<leader>rr") #'my/reload-config)
     (evil-define-key 'normal 'global (kbd "<leader>tz") #'my/zen-mode))
 #+END_SRC
@@ -1606,43 +1576,43 @@ message.
 from that repository.
 
 #+BEGIN_SRC emacs-lisp
-(defun my/sync-dotfiles ()
-  "Copy ~/dots/* to ~/dox/nixdots/ and commit + push with a prompted message."
-  (interactive)
-  (let ((msg (read-string "Commit message: ")))
-    (if (string-empty-p msg)
-        (message "Sync aborted — commit message cannot be empty.")
-      (let* ((src           (expand-file-name "~/dots/"))
-             (dest          (expand-file-name "~/dox/nixdots/"))
-             (default-directory dest)
-             (buf           (get-buffer-create "*dotfiles-sync*"))
-             (original-win  (selected-window)))
-        (with-current-buffer buf
-          (erase-buffer))
-        (display-buffer buf)
-        (unless (file-directory-p dest)
-          (user-error "Destination directory %s does not exist" dest))
-        (message "Copying dotfiles...")
-        (let ((copy-result (call-process "cp" nil buf t "-r" src dest)))
-          (if (not (zerop copy-result))
-              (message "Copy failed — check *dotfiles-sync* for details")
-            (message "Staging...")
-            (let ((add-result (call-process "git" nil buf t "add" ".")))
-              (if (not (zerop add-result))
-                  (message "Git add failed — check *dotfiles-sync* for details")
-                (message "Committing...")
-                (let ((commit-result (call-process "git" nil buf t "commit" "-m" msg)))
-                  (if (not (zerop commit-result))
-                      (message "Git commit failed — check *dotfiles-sync* for details")
-                    (message "Pushing...")
-                    (let ((push-result (call-process "git" nil buf t "push")))
-                      (if (not (zerop push-result))
-                          (message "Git push failed — check *dotfiles-sync* for details")
-                        (select-window original-win)
-                        (message "Dotfiles synced and pushed: %s" msg)))))))))))))
+  (defun my/sync-dotfiles ()
+    "Copy ~/dots/* to ~/dox/nixdots/ and commit + push with a prompted message."
+    (interactive)
+    (let ((msg (read-string "Commit message: ")))
+      (if (string-empty-p msg)
+          (message "Sync aborted — commit message cannot be empty.")
+        (let* ((src           (expand-file-name "~/dots/"))
+               (dest          (expand-file-name "~/dox/nixdots/"))
+               (default-directory dest)
+               (buf           (get-buffer-create "*dotfiles-sync*"))
+               (original-win  (selected-window)))
+          (with-current-buffer buf
+            (erase-buffer))
+          (display-buffer buf)
+          (unless (file-directory-p dest)
+            (user-error "Destination directory %s does not exist" dest))
+          (message "Copying dotfiles...")
+  	(let ((copy-result (call-process "rsync" nil buf t "-av" src dest)))
+            (if (not (zerop copy-result))
+                (message "Copy failed — check *dotfiles-sync* for details")
+              (message "Staging...")
+              (let ((add-result (call-process "git" nil buf t "add" ".")))
+                (if (not (zerop add-result))
+                    (message "Git add failed — check *dotfiles-sync* for details")
+                  (message "Committing...")
+                  (let ((commit-result (call-process "git" nil buf t "commit" "-m" msg)))
+                    (if (not (zerop commit-result))
+                        (message "Git commit failed — check *dotfiles-sync* for details")
+                      (message "Pushing...")
+                      (let ((push-result (call-process "git" nil buf t "push")))
+                        (if (not (zerop push-result))
+                            (message "Git push failed — check *dotfiles-sync* for details")
+                          (select-window original-win)
+                          (message "Dotfiles synced and pushed: %s" msg)))))))))))))
 
-(with-eval-after-load 'evil
-  (evil-define-key 'normal 'global (kbd "<leader>gd") #'my/sync-dotfiles))
+  (with-eval-after-load 'evil
+    (evil-define-key 'normal 'global (kbd "<leader>gd") #'my/sync-dotfiles))
 #+END_SRC
 
 *** NixOS Rebuild (~SPC g r~)
