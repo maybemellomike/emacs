@@ -1277,7 +1277,7 @@ ESHELL-BUF-NAME is the buffer name for the eshell."
   (let* ((top-win      (selected-window))
          (placeholder  (get-buffer-create (format " *layout:%s*" dir)))
          (total-height (frame-height))
-         (shell-height (max 10 (/ total-height 3)))
+         (shell-height 15)
          (eshell-win   (progn
                          (switch-to-buffer placeholder)
                          (split-window-below (- total-height shell-height)))))
