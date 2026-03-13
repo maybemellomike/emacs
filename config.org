@@ -743,8 +743,6 @@ renders as invisible padding rather than a visible grey bar. ~:box nil~ and
 ;; Outer frame border: 5px gap between the OS window edge and Emacs' window area
 (add-to-list 'default-frame-alist '(internal-border-width . 5))
 
-;; Make the header-line face invisible — same background as the buffer,
-;; no box, no underline, so it acts as silent top padding only.
 (custom-set-faces
  '(header-line ((t (:inherit default
                     :background unspecified
@@ -752,22 +750,20 @@ renders as invisible padding rather than a visible grey bar. ~:box nil~ and
                     :box nil
                     :underline nil)))))
 
-;; Apply per-window padding to every window whenever the layout changes
 (defun my/set-window-padding ()
-  "Add left/right margins and a blank header line to every window."
+  "Add left/right margins and a blank header line to every window.
+Excludes which-key, minibuffer, and transient popup windows."
   (walk-windows
    (lambda (win)
-     (unless (window-minibuffer-p win)
-       ;; 3 columns of left and right margin inside every split
+     (unless (or (window-minibuffer-p win)
+                 (string-prefix-p " *which-key*"
+                                  (buffer-name (window-buffer win))))
        (set-window-margins win 3 3)
-       ;; Blank header line acts as top padding
        (with-current-buffer (window-buffer win)
          (setq-local header-line-format " "))))
    nil t))
 
 (add-hook 'window-configuration-change-hook #'my/set-window-padding)
-
-;; Run once immediately so padding is present before any layout changes occur
 (my/set-window-padding)
 #+END_SRC
 
@@ -1513,6 +1509,34 @@ Throwing these in also to have spacemacs like promps for find files and terminal
 
 (with-eval-after-load 'evil
   (evil-define-key 'normal 'global (kbd "<leader>sc") #'my/find-in-dots))
+#+END_SRC
+Do the same but with a split to the right
+#+BEGIN_SRC emacs-lisp
+(defun my/find-in-dots-vsplit ()
+  "Fuzzy-find a file under ~/dots/ and open it in a new vertical split."
+  (interactive)
+  (let* ((dir (expand-file-name "~/dots/"))
+         (files (split-string
+                 (shell-command-to-string
+                  (if (executable-find "fd")
+                      (format "fd --type f --strip-cwd-prefix . %s"
+                              (shell-quote-argument dir))
+                    (format "find %s -type f -not -path '*/\\.*'"
+                            (shell-quote-argument dir))))
+                 "\n" t))
+         (choice (consult--read
+                  files
+                  :prompt "Find in dots (vsplit): "
+                  :category 'file
+                  :sort nil
+                  :state (consult--file-preview))))
+    (when choice
+      (let ((new-win (split-window-right)))
+        (select-window new-win)
+        (find-file (expand-file-name choice dir))))))
+
+(with-eval-after-load 'evil
+  (evil-define-key 'normal 'global (kbd "<leader>svc") #'my/find-in-dots-vsplit))
 #+END_SRC
 
 *** Buffer Management (Space leader)
