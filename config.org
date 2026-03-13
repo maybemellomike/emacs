@@ -1460,6 +1460,7 @@ Throwing these in also to have spacemacs like promps for find files and terminal
 
 **** Quick Access Directories
 
+***** Document search ~SPC s d~
 #+BEGIN_SRC emacs-lisp
 (defun my/find-in-dox ()
   "Fuzzy-find a file under ~/dox/ and open it in the current window."
@@ -1484,6 +1485,34 @@ Throwing these in also to have spacemacs like promps for find files and terminal
 
 (with-eval-after-load 'evil
   (evil-define-key 'normal 'global (kbd "<leader>sd") #'my/find-in-dox))
+#+END_SRC
+
+***** Dotfile search ~SPC s c~
+
+#+BEGIN_SRC emacs-lisp
+(defun my/find-in-dots ()
+  "Fuzzy-find a file under ~/dots/ and open it in the current window."
+  (interactive)
+  (let* ((dir (expand-file-name "~/dots/"))
+         (files (split-string
+                 (shell-command-to-string
+                  (if (executable-find "fd")
+                      (format "fd --type f --strip-cwd-prefix . %s"
+                              (shell-quote-argument dir))
+                    (format "find %s -type f -not -path '*/\\.*'"
+                            (shell-quote-argument dir))))
+                 "\n" t))
+         (choice (consult--read
+                  files
+                  :prompt "Find in dots: "
+                  :category 'file
+                  :sort nil
+                  :state (consult--file-preview))))
+    (when choice
+      (find-file (expand-file-name choice dir)))))
+
+(with-eval-after-load 'evil
+  (evil-define-key 'normal 'global (kbd "<leader>sc") #'my/find-in-dots))
 #+END_SRC
 
 *** Buffer Management (Space leader)
