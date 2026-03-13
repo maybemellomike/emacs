@@ -2,6 +2,49 @@
 #+AUTHOR: Liam
 #+DESCRIPTION: No, I don't know too much whats happening here but hey something's at least happening
 #+PROPERTY: header-args :tangle config.el
+#+OPTIONS: toc:nil
+
+* Table of Contents :toc:
+:PROPERTIES:
+:TOC: :include all
+:END:
+
+- [[#goals][Goals]]
+- [[#straightel-and-use-package][Straight.el and use-package]]
+- [[#tidy-filesystem][Tidy filesystem]]
+- [[#ui-cleanup][UI Cleanup]]
+  - [[#silence][Silence]]
+  - [[#mode-line-doom-modeline][Mode Line (doom-modeline)]]
+  - [[#syntax-highlighting][Syntax Highlighting]]
+  - [[#relative-line-numbers][Relative Line Numbers]]
+- [[#dired--dirvish][Dired / Dirvish]]
+- [[#editing][Editing]]
+  - [[#evil][Evil]]
+  - [[#smartparens][Smartparens]]
+  - [[#zen-mode-olivetti--no-fullscreen][Zen Mode (olivetti — no fullscreen)]]
+  - [[#text-wrapping--word-processor-behavior][Text Wrapping / Word-Processor Behavior]]
+- [[#org-mode][Org Mode]]
+- [[#shrink-path][Shrink Path]]
+- [[#config-reload][Config Reload]]
+- [[#system-clipboard][System Clipboard]]
+- [[#keybinds][Keybinds]]
+  - [[#window-focus-navigate-between-splits][Window Focus (navigate between splits)]]
+  - [[#window-movement-swap-pane-positions][Window Movement (swap pane positions)]]
+  - [[#terminal-eshell-in-a-bottom-split][Terminal (eshell in a bottom split)]]
+  - [[#close-window][Close Window]]
+  - [[#zen-mode][Zen Mode]]
+- [[#padding][Padding]]
+- [[#document-management][Document Management]]
+  - [[#pdf-tools][PDF Tools]]
+  - [[#org--pdf-live-preview][Org → PDF Live Preview]]
+  - [[#typst-major-mode][Typst Major Mode]]
+  - [[#typst-live-preview][Typst Live Preview]]
+  - [[#org--typst-live-preview][Org → Typst Live Preview]]
+- [[#automagic-layouts][Automagic Layouts]]
+  - [[#project-layouts][Project Layouts]]
+- [[#spacemacs-like-keybinds][Spacemacs like Keybinds]]
+  - [[#config-sync-spc-g-p][Config Sync (~SPC g p~)]]
+  - [[#dotfiles-sync-spc-g-d][Dotfiles Sync (~SPC g d~)]]
 
 * Goals
 
@@ -87,7 +130,17 @@ Some clean up or behavior things which are more or less built in settings I just
   (global-hl-line-mode 1)
 #+END_SRC
 
-** Fonts
+** Silence
+
+Disables the audible bell and the visual flash fallback that Emacs uses when the
+bell is muted. Without both settings Emacs will either beep through the system
+speaker or flash the frame depending on the desktop environment.
+
+#+BEGIN_SRC emacs-lisp
+(setq ring-bell-function 'ignore)  ;; disable audible bell entirely
+(setq visible-bell nil)            ;; disable the visual flash fallback
+#+END_SRC
+*** Fonts
 Here we are playing around with the available fonts. So just for a note here are a few things which can be run in the scratch buffer to take effect across the whole system to try things out before actually applying them here in the config.
 
 #+BEGIN_SRC emacs-lisp
@@ -108,7 +161,7 @@ so swapping fonts only ever requires changing a single block.
 (set-face-attribute 'fixed-pitch nil    :family "Fantasque Sans Mono"     :height 120)
 (set-face-attribute 'variable-pitch nil :family "NewComputerModernSans10" :height 140)
 #+END_SRC
-** Small Changes for Big Effect
+*** Small Changes for Big Effect
 
 Somehow there isn't undo from the get go? Or there is but it is very 1970s in that it super tries to conserve ram or something and therefore isn't too practical. Next up is WhichKey which well, shows you the keys available for the next press. Very handy due to the sheer volume of things you /can/ press in Emacs it seems.
 
@@ -121,7 +174,7 @@ Somehow there isn't undo from the get go? Or there is but it is very 1970s in th
     (which-key-idle-delay 0.5))
 #+END_SRC
 
-** Telescope-like Fuzzy Finder
+*** Telescope-like Fuzzy Finder
 
 ~vertico~ provides the vertical completion UI, ~orderless~ enables fuzzy/space-separated
 matching, ~marginalia~ adds annotations, and ~consult~ provides the search commands.
@@ -152,7 +205,116 @@ matching, ~marginalia~ adds annotations, and ~consult~ provides the search comma
   (recentf-mode 1))
 #+END_SRC
 
-** Theme
+
+*** Icons
+#+BEGIN_SRC emacs-lisp
+(use-package nerd-icons)
+#+END_SRC
+
+** Mode Line (doom-modeline)
+
+~doom-modeline~ is a minimal, fast mode-line built on ~nerd-icons~. It shows
+the buffer name, major mode, Evil state, git branch, and diagnostics in a
+clean single line.
+
+~doom-modeline-icon~ is set to ~nil~ here since we are not using glyphs or
+powerline separators — this keeps it readable on any font without needing
+a patched Nerd Font active on the mode-line specifically.
+
+#+BEGIN_SRC emacs-lisp
+(use-package doom-modeline
+  :init
+  (doom-modeline-mode 1)
+  :custom
+  (doom-modeline-icon nil)              ;; no icons/glyphs, clean text only
+  (doom-modeline-major-mode-icon t)   ;; no major mode icon
+  (doom-modeline-time-icon t)   ;; no major mode icon
+  (doom-modeline-height 26)             ;; slightly taller than default
+  (doom-modeline-bar-width 5)           ;; left accent bar width
+  (doom-modeline-buffer-file-name-style 'truncate-upto-project) ;; short but informative path
+  (doom-modeline-minor-modes 1)       ;; hide minor mode clutter
+  (doom-modeline-enable-word-count 1)
+  (doom-modeline-buffer-encoding nil))  ;; hide UTF-8 noise
+#+END_SRC
+
+** Syntax Highlighting
+Non LSP based syntax highlighting for the main languages on my machine .
+
+**** Nix Syntax 
+
+~nix-mode~ provides font-lock syntax highlighting for ~.nix~ files with no
+LSP or language server required. Keywords, strings, builtins, interpolation,
+and comments all get distinct colours drawn from the active theme.
+
+#+BEGIN_SRC emacs-lisp
+(use-package nix-mode
+  :mode "\\.nix\\'")
+#+END_SRC
+
+**** Markdown 
+#+BEGIN_SRC emacs-lisp
+(use-package markdown-mode
+  :mode ("\\.md\\'" "\\.markdown\\'"))
+#+END_SRC
+
+**** Help Buffer Appearance
+
+Enables syntax highlighting in ~*Help*~ buffers so function documentation renders
+with the same font-lock colours as source files. ~help-mode~ already uses
+~font-lock-mode~ internally — ~(add-hook 'help-mode-hook #'font-lock-mode)~ simply
+ensures it is always active.
+
+~variable-pitch-mode~ in ~help-mode-hook~ applies the same proportional font to
+help prose that org-mode uses for its prose sections, while code samples and
+keybind listings in help buffers inherit ~fixed-pitch~ through their existing
+faces, keeping them monospace.
+
+#+BEGIN_SRC emacs-lisp
+(add-hook 'help-mode-hook #'variable-pitch-mode)
+(add-hook 'help-mode-hook #'font-lock-mode)
+#+END_SRC
+
+** Relative Line Numbers
+
+The keys to a stable gutter width are:
+1. Set ~display-line-numbers-width~ globally as a default BEFORE the mode enables.
+2. Set ~display-line-numbers-right-justify~ to ~t~ so numbers are right-aligned
+   within the fixed-width gutter. Without this, numbers are left-aligned and the
+   text body shifts sideways whenever the relative number gains or loses a digit
+   as the cursor moves.
+3. In org-mode, re-assert the width AFTER ~variable-pitch-mode~ fires, because
+   proportional fonts cause Emacs to recalculate gutter metrics. We do this by
+   appending to the hook (the ~t~ argument to ~add-hook~) so it runs last.
+
+#+BEGIN_SRC emacs-lisp
+  (setq-default display-line-numbers-type 'relative)
+  (setq-default display-line-numbers-width 4)  ;; 4 = 3 digit columns + 1 padding so
+                                                ;; two-digit numbers never reflow the gutter
+  (setq-default display-line-numbers-right-justify t) ;; right-align numbers so the text
+                                                       ;; body stays anchored as digits change
+  (global-display-line-numbers-mode t)
+
+  (dolist (mode '(term-mode-hook
+                  shell-mode-hook
+                  eshell-mode-hook
+                  vterm-mode-hook
+                  treemacs-mode-hook
+                  minibuffer-setup-hook))
+    (add-hook mode (lambda () (display-line-numbers-mode 0))))
+
+  ;; Re-assert fixed gutter width in org-mode AFTER variable-pitch-mode fires.
+  ;; The trailing `t` appends this hook so it runs after all others on the hook list.
+  (add-hook 'org-mode-hook
+            (lambda ()
+              (setq-local display-line-numbers-width 4)
+              (setq-local display-line-numbers-width-start nil))
+            t)
+(custom-set-faces
+ '(line-number               ((t (:inherit fixed-pitch))))
+ '(line-number-current-line  ((t (:inherit fixed-pitch)))))
+#+END_SRC
+
+*** Theme
 
 #+BEGIN_SRC emacs-lisp
 (use-package doom-themes
@@ -162,7 +324,7 @@ matching, ~marginalia~ adds annotations, and ~consult~ provides the search comma
   (load-theme 'doom-tomorrow-night t))
 #+END_SRC
 
-**** Theme Toggle
+***** Theme Toggle
 
 Toggles between the dark theme (~doom-monokai-machine~) and the light theme
 (~ef-cyprus~). ~C-c T~ is used because ~C-c t~ is already bound to the eshell toggle.
@@ -270,114 +432,6 @@ Yazi-style file navigation with previews and a cleaner display within DirEd.
 (setq dirvish-default-layout '(1 0.11 0.55))
 #+end_src
 #+end_src
-
-*** Icons
-#+BEGIN_SRC emacs-lisp
-(use-package nerd-icons)
-#+END_SRC
-** Mode Line (doom-modeline)
-
-~doom-modeline~ is a minimal, fast mode-line built on ~nerd-icons~. It shows
-the buffer name, major mode, Evil state, git branch, and diagnostics in a
-clean single line.
-
-~doom-modeline-icon~ is set to ~nil~ here since we are not using glyphs or
-powerline separators — this keeps it readable on any font without needing
-a patched Nerd Font active on the mode-line specifically.
-
-#+BEGIN_SRC emacs-lisp
-(use-package doom-modeline
-  :init
-  (doom-modeline-mode 1)
-  :custom
-  (doom-modeline-icon nil)              ;; no icons/glyphs, clean text only
-  (doom-modeline-major-mode-icon t)   ;; no major mode icon
-  (doom-modeline-time-icon t)   ;; no major mode icon
-  (doom-modeline-height 26)             ;; slightly taller than default
-  (doom-modeline-bar-width 5)           ;; left accent bar width
-  (doom-modeline-buffer-file-name-style 'truncate-upto-project) ;; short but informative path
-  (doom-modeline-minor-modes 1)       ;; hide minor mode clutter
-  (doom-modeline-enable-word-count 1)
-  (doom-modeline-buffer-encoding nil))  ;; hide UTF-8 noise
-#+END_SRC
-
-** Syntax Highlighting
-Non LSP based syntax highlighting for the main languages on my machine .
-
-**** Nix Syntax 
-
-~nix-mode~ provides font-lock syntax highlighting for ~.nix~ files with no
-LSP or language server required. Keywords, strings, builtins, interpolation,
-and comments all get distinct colours drawn from the active theme.
-
-#+BEGIN_SRC emacs-lisp
-(use-package nix-mode
-  :mode "\\.nix\\'")
-#+END_SRC
-
-**** Markdown 
-#+BEGIN_SRC emacs-lisp
-(use-package markdown-mode
-  :mode ("\\.md\\'" "\\.markdown\\'"))
-#+END_SRC
-
-**** Help Buffer Appearance
-
-Enables syntax highlighting in ~*Help*~ buffers so function documentation renders
-with the same font-lock colours as source files. ~help-mode~ already uses
-~font-lock-mode~ internally — ~(add-hook 'help-mode-hook #'font-lock-mode)~ simply
-ensures it is always active.
-
-~variable-pitch-mode~ in ~help-mode-hook~ applies the same proportional font to
-help prose that org-mode uses for its prose sections, while code samples and
-keybind listings in help buffers inherit ~fixed-pitch~ through their existing
-faces, keeping them monospace.
-
-#+BEGIN_SRC emacs-lisp
-(add-hook 'help-mode-hook #'variable-pitch-mode)
-(add-hook 'help-mode-hook #'font-lock-mode)
-#+END_SRC
-
-** Relative Line Numbers
-
-The keys to a stable gutter width are:
-1. Set ~display-line-numbers-width~ globally as a default BEFORE the mode enables.
-2. Set ~display-line-numbers-right-justify~ to ~t~ so numbers are right-aligned
-   within the fixed-width gutter. Without this, numbers are left-aligned and the
-   text body shifts sideways whenever the relative number gains or loses a digit
-   as the cursor moves.
-3. In org-mode, re-assert the width AFTER ~variable-pitch-mode~ fires, because
-   proportional fonts cause Emacs to recalculate gutter metrics. We do this by
-   appending to the hook (the ~t~ argument to ~add-hook~) so it runs last.
-
-#+BEGIN_SRC emacs-lisp
-  (setq-default display-line-numbers-type 'relative)
-  (setq-default display-line-numbers-width 4)  ;; 4 = 3 digit columns + 1 padding so
-                                                ;; two-digit numbers never reflow the gutter
-  (setq-default display-line-numbers-right-justify t) ;; right-align numbers so the text
-                                                       ;; body stays anchored as digits change
-  (global-display-line-numbers-mode t)
-
-  (dolist (mode '(term-mode-hook
-                  shell-mode-hook
-                  eshell-mode-hook
-                  vterm-mode-hook
-                  treemacs-mode-hook
-                  minibuffer-setup-hook))
-    (add-hook mode (lambda () (display-line-numbers-mode 0))))
-
-  ;; Re-assert fixed gutter width in org-mode AFTER variable-pitch-mode fires.
-  ;; The trailing `t` appends this hook so it runs after all others on the hook list.
-  (add-hook 'org-mode-hook
-            (lambda ()
-              (setq-local display-line-numbers-width 4)
-              (setq-local display-line-numbers-width-start nil))
-            t)
-(custom-set-faces
- '(line-number               ((t (:inherit fixed-pitch))))
- '(line-number-current-line  ((t (:inherit fixed-pitch)))))
-#+END_SRC
-
 * Editing
 Here I have things such as Evil (vim) mode, completion, and other editing related tweaks.
 
@@ -396,7 +450,7 @@ Here I have things such as Evil (vim) mode, completion, and other editing relate
   (evil-collection-init))
 #+END_SRC
 
-* Smartparens
+** Smartparens
 Auto-close pairs with smart heuristics to avoid false triggers.
 
 #+begin_src emacs-lisp
@@ -409,7 +463,7 @@ Auto-close pairs with smart heuristics to avoid false triggers.
   (sp-local-pair 'org-mode "/" "/"))
 #+end_src
 
-** Corfu Completion
+*** Corfu Completion
 
 Non LSP based completion that works in all buffers. Popular package that leverages built in things Emacs is already doing.  
 
@@ -427,77 +481,7 @@ Non LSP based completion that works in all buffers. Popular package that leverag
   (define-key corfu-map (kbd "ESC") #'corfu-quit))
 #+END_SRC
 
-
-* Org Mode
-
-Headings use a palette drawn from doom-monokai-machine's own accent colours so
-everything feels native to the theme. The colours chosen are:
-
-- Level 1 :: ~#F92672~ — pink/red, high visual weight for top-level headings
-- Level 2 :: ~#66D9EF~ — cyan, distinct from level 1 at a glance
-- Level 3 :: ~#A6E22E~ — green
-- Level 4 :: ~#E6DB74~ — yellow
-- Level 5 :: ~#FD971F~ — orange
-- Level 6 :: ~#AE81FF~ — purple
-- Level 7 / 8 :: muted grey, de-emphasised since deep nesting is rare
-
-Other coloured elements:
-- ~org-todo~ / ~org-done~ — red and green keyword labels
-- ~org-date~ — cyan timestamp links
-- ~org-tag~ — muted orange tags
-- ~org-link~ — cyan underlined links
-- ~org-list-dt~ — yellow definition-list terms
-- ~org-document-title~ — large white bold title at the top of the file
-- ~org-document-info~ — muted grey for #+AUTHOR, #+DATE etc.
-
-#+BEGIN_SRC emacs-lisp
-    (use-package org
-      :straight (:type built-in)  ;; tell straight to use Emacs' built-in org rather than
-                                   ;; cloning from MELPA, avoiding version conflicts
-      :hook
-      ((org-mode . variable-pitch-mode)
-       (org-mode . visual-line-mode))
-      :custom-face
-      ;; Headings — height + weight carried over, foreground colours added
-      (org-level-1 ((t (:height 1.4 :weight bold  :foreground "#F92672"))))
-      (org-level-2 ((t (:height 1.3 :weight bold  :foreground "#66D9EF"))))
-      (org-level-3 ((t (:height 1.2 :weight bold  :foreground "#A6E22E"))))
-      (org-level-4 ((t (:height 1.1 :weight bold  :foreground "#E6DB74"))))
-      (org-level-5 ((t (:height 1.05             :foreground "#FD971F"))))
-      (org-level-6 ((t (:height 1.02             :foreground "#AE81FF"))))
-      (org-level-7 ((t (:height 1.0              :foreground "#75715E"))))
-      (org-level-8 ((t (:height 1.0              :foreground "#75715E"))))
-      ;; Code blocks — background is intentionally unset here so it inherits from
-      ;; the active theme. my/apply-org-theme-faces re-applies theme-appropriate
-      ;; colours whenever the theme is toggled (see Theme Toggle section).
-      (org-block            ((t (:inherit fixed-pitch))))
-      (org-block-begin-line ((t (:inherit fixed-pitch))))
-      (org-block-end-line   ((t (:inherit fixed-pitch))))
-      (org-code             ((t (:inherit fixed-pitch))))
-      ;; Todo keywords
-      (org-todo ((t (:foreground "#F92672" :weight bold))))
-      (org-done ((t (:foreground "#A6E22E" :weight bold))))
-      ;; Timestamps, tags, links
-      (org-date ((t (:foreground "#66D9EF" :underline t))))
-      (org-tag  ((t (:foreground "#FD971F" :weight normal))))
-      (org-link ((t (:foreground "#66D9EF" :underline t))))
-      ;; Definition list terms
-      (org-list-dt ((t (:foreground "#E6DB74" :weight bold))))
-      ;; Document title and info lines (#+TITLE, #+AUTHOR etc.)
-      (org-document-title ((t (:height 1.5 :weight bold :foreground "#F8F8F2"))))
-      (org-document-info  ((t (:foreground "#75715E")))))
-
-(use-package org-modern
-  :after org
-  :hook
-  (org-mode . org-modern-mode)
-  :custom
-  (org-modern-star '("◉" "○" "✸" "✿" "✤" "✦" "▶" "▷"))
-  (org-modern-list '((45 . "–") (43 . "•") (42 . "◦")))
-  (org-modern-checkbox '((88 . "✔") (45 . "◐") (32 . "○"))))
-#+END_SRC
-
-* Zen Mode (olivetti — no fullscreen)
+** Zen Mode (olivetti — no fullscreen)
 #+BEGIN_SRC emacs-lisp
 (use-package olivetti
   :ensure t
@@ -530,7 +514,8 @@ Other coloured elements:
   (add-hook hook (lambda () (my/zen-mode))))
 #+END_SRC
 
-* Text Wrapping / Word-Processor Behavior
+
+** Text Wrapping / Word-Processor Behavior
 #+BEGIN_SRC emacs-lisp
   (defun my/text-mode-line-wrapping ()
     "Enable word-wrapping like a word processor."
@@ -550,6 +535,77 @@ Other coloured elements:
                 latex-mode-hook
                 LaTeX-mode-hook))
   (add-hook hook #'variable-pitch-mode))
+#+END_SRC
+
+* Org Mode
+
+Headings use a palette drawn from doom-monokai-machine's own accent colours so
+everything feels native to the theme. The colours chosen are:
+
+- Level 1 :: ~#F92672~ — pink/red, high visual weight for top-level headings
+- Level 2 :: ~#66D9EF~ — cyan, distinct from level 1 at a glance
+- Level 3 :: ~#A6E22E~ — green
+- Level 4 :: ~#E6DB74~ — yellow
+- Level 5 :: ~#FD971F~ — orange
+- Level 6 :: ~#AE81FF~ — purple
+- Level 7 / 8 :: muted grey, de-emphasised since deep nesting is rare
+
+Other coloured elements:
+- ~org-todo~ / ~org-done~ — red and green keyword labels
+- ~org-date~ — cyan timestamp links
+- ~org-tag~ — muted orange tags
+- ~org-link~ — cyan underlined links
+- ~org-list-dt~ — yellow definition-list terms
+- ~org-document-title~ — large white bold title at the top of the file
+- ~org-document-info~ — muted grey for #+AUTHOR, #+DATE etc.
+
+#+BEGIN_SRC emacs-lisp
+        (use-package org
+          :straight (:type built-in)  ;; tell straight to use Emacs' built-in org rather than
+                                       ;; cloning from MELPA, avoiding version conflicts
+          :hook
+          ((org-mode . variable-pitch-mode)
+           (org-mode . visual-line-mode))
+          :custom-face
+          ;; Headings — height + weight carried over, foreground colours added
+          (org-level-1 ((t (:height 1.4 :weight bold  :foreground "#F92672"))))
+          (org-level-2 ((t (:height 1.3 :weight bold  :foreground "#66D9EF"))))
+          (org-level-3 ((t (:height 1.2 :weight bold  :foreground "#A6E22E"))))
+          (org-level-4 ((t (:height 1.1 :weight bold  :foreground "#E6DB74"))))
+          (org-level-5 ((t (:height 1.05             :foreground "#FD971F"))))
+          (org-level-6 ((t (:height 1.02             :foreground "#AE81FF"))))
+          (org-level-7 ((t (:height 1.0              :foreground "#75715E"))))
+          (org-level-8 ((t (:height 1.0              :foreground "#75715E"))))
+          ;; Code blocks — background is intentionally unset here so it inherits from
+          ;; the active theme. my/apply-org-theme-faces re-applies theme-appropriate
+          ;; colours whenever the theme is toggled (see Theme Toggle section).
+          (org-block            ((t (:inherit fixed-pitch))))
+          (org-block-begin-line ((t (:inherit fixed-pitch))))
+          (org-block-end-line   ((t (:inherit fixed-pitch))))
+          (org-code             ((t (:inherit fixed-pitch))))
+          ;; Todo keywords
+          (org-todo ((t (:foreground "#F92672" :weight bold))))
+          (org-done ((t (:foreground "#A6E22E" :weight bold))))
+          ;; Timestamps, tags, links
+          (org-date ((t (:foreground "#66D9EF" :underline t))))
+          (org-tag  ((t (:foreground "#FD971F" :weight normal))))
+          (org-link ((t (:foreground "#66D9EF" :underline t))))
+          ;; Definition list terms
+          (org-list-dt ((t (:foreground "#E6DB74" :weight bold))))
+          ;; Document title and info lines (#+TITLE, #+AUTHOR etc.)
+          (org-document-title ((t (:height 1.5 :weight bold :foreground "#F8F8F2"))))
+          (org-document-info  ((t (:foreground "#75715E")))))
+
+    (use-package org-modern
+      :after org
+      :hook
+      (org-mode . org-modern-mode)
+      :custom
+      (org-modern-star '("◉" "○" "✸" "✿" "✤" "✦" "▶" "▷"))
+      (org-modern-list '((45 . "–") (43 . "•") (42 . "◦")))
+      (org-modern-checkbox '((88 . "✔") (45 . "◐") (32 . "○"))))
+    (use-package toc-org
+      :hook (org-mode . toc-org-mode))
 #+END_SRC
 
 * Shrink Path
@@ -767,6 +823,8 @@ Excludes which-key, minibuffer, and transient popup windows."
 (my/set-window-padding)
 #+END_SRC
 
+* Document Management
+Below are the sections for editing different types of documents and the associated configurations to have nice viewing and the like.
 
 ** PDF Tools
 
@@ -1227,18 +1285,8 @@ The ~.typ~ file is a build artefact — the ~.org~ file is the source of truth.
   (define-key org-mode-map (kbd "C-c p l") #'my/org-typst-preview-toggle-live))
 #+END_SRC
 
-* Silence
 
-Disables the audible bell and the visual flash fallback that Emacs uses when the
-bell is muted. Without both settings Emacs will either beep through the system
-speaker or flash the frame depending on the desktop environment.
-
-#+BEGIN_SRC emacs-lisp
-(setq ring-bell-function 'ignore)  ;; disable audible bell entirely
-(setq visible-bell nil)            ;; disable the visual flash fallback
-#+END_SRC
-
-** Automagic Layouts
+* Automagic Layouts
 
 #+BEGIN_SRC emacs-lisp
 (defun my/open-config ()
@@ -1249,7 +1297,7 @@ speaker or flash the frame depending on the desktop environment.
 (global-set-key (kbd "C-c o c") #'my/open-config)
 #+END_SRC
 
-* Project Layouts
+** Project Layouts
 
 Each function below opens a purpose-built window layout for a specific project
 or directory. They all follow the same pattern:
@@ -1330,7 +1378,7 @@ out of the buffer list)."
       (set-process-query-on-exit-flag (get-process name) nil))))
 #+END_SRC
 
-*** Dotfiles (~C-c o d~)
+**** Dotfiles (~C-c o d~)
 
 Opens ~~/dots~ with dired on top and an eshell below.
 
@@ -1343,7 +1391,7 @@ Opens ~~/dots~ with dired on top and an eshell below.
 (global-set-key (kbd "C-c o d") #'my/open-dotfiles)
 #+END_SRC
 
-*** Personal Blog (~C-c o b~)
+**** Personal Blog (~C-c o b~)
 
 Opens ~~/dox/blog~ with dired on top and an eshell below. Also starts a hidden
 ~hugo server~ process in the background so the preview server is running while
@@ -1363,7 +1411,7 @@ Starts a hidden hugo server process in the background."
 (global-set-key (kbd "C-c o b") #'my/open-blog)
 #+END_SRC
 
-*** Sailing Blog (~C-c o s~)
+**** Sailing Blog (~C-c o s~)
 
 Opens ~~/dox/clean-rebuild~ with dired on top and an eshell below. Also starts
 a hidden ~hugo server~ process for this project in the background, independent
@@ -1381,7 +1429,7 @@ Starts a hidden hugo server process in the background."
 (global-set-key (kbd "C-c o s") #'my/open-site)
 #+END_SRC
 
-**** Kill Hugo Servers (~C-c o k~)
+***** Kill Hugo Servers (~C-c o k~)
 
 Kills all background Hugo server processes started by the project layout
 functions. Searches for any live process whose name begins with ~hugo:~ and
