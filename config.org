@@ -495,23 +495,10 @@ Non LSP based completion that works in all buffers. Popular package that leverag
           (display-line-numbers-mode 1))
       (progn
         (olivetti-mode 1)
-        (olivetti-set-width 80)
-        (display-line-numbers-mode 0)
-        (run-with-timer 0.1 nil
-                        (lambda (win)
-                          (olivetti-set-window win))
-                        (selected-window)))))
+        (olivetti-set-width 0.55)  ;; 65% of window width, auto-centers
+        (display-line-numbers-mode 0))))
   :bind
   ("C-c z" . my/zen-mode))
-;; Auto-enable zen mode in writing modes.
-;; These are added via add-hook rather than use-package :hook because
-;; AUCTeX's LaTeX-mode is a derived mode that receives arguments during
-;; activation, which causes :hook to fail with "wrong number of arguments".
-;; Wrapping in a lambda avoids that entirely.
-(dolist (hook '(LaTeX-mode-hook
-                latex-mode-hook
-                typst-mode-hook))
-  (add-hook hook (lambda () (my/zen-mode))))
 #+END_SRC
 
 
@@ -804,7 +791,6 @@ renders as invisible padding rather than a visible grey bar. ~:box nil~ and
 ~:underline nil~ remove any border the theme may add to the face.
 
 #+BEGIN_SRC emacs-lisp
-;; Outer frame border: 5px gap between the OS window edge and Emacs' window area
 (add-to-list 'default-frame-alist '(internal-border-width . 5))
 
 (custom-set-faces
@@ -816,12 +802,13 @@ renders as invisible padding rather than a visible grey bar. ~:box nil~ and
 
 (defun my/set-window-padding ()
   "Add left/right margins and a blank header line to every window.
-Excludes which-key, minibuffer, and transient popup windows."
+Excludes which-key, minibuffer, olivetti, and transient popup windows."
   (walk-windows
    (lambda (win)
      (unless (or (window-minibuffer-p win)
                  (string-prefix-p " *which-key*"
-                                  (buffer-name (window-buffer win))))
+                                  (buffer-name (window-buffer win)))
+                 (buffer-local-value 'olivetti-mode (window-buffer win)))
        (set-window-margins win 3 3)
        (with-current-buffer (window-buffer win)
          (setq-local header-line-format " "))))
@@ -1799,3 +1786,4 @@ output are visible as they stream in. The split reuses an existing
 (with-eval-after-load 'evil
   (evil-define-key 'normal 'global (kbd "<leader>gr") #'my/nixos-rebuild))
 #+END_SRC
+
