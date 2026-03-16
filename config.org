@@ -45,6 +45,7 @@
 - [[#spacemacs-like-keybinds][Spacemacs like Keybinds]]
   - [[#config-sync-spc-g-p][Config Sync (~SPC g p~)]]
   - [[#dotfiles-sync-spc-g-d][Dotfiles Sync (~SPC g d~)]]
+  - [[#music-player-emms][Music Player (EMMS)]]
 
 * Goals
 
@@ -495,7 +496,7 @@ Non LSP based completion that works in all buffers. Popular package that leverag
           (display-line-numbers-mode 1))
       (progn
         (olivetti-mode 1)
-        (olivetti-set-width 0.55)  ;; 65% of window width, auto-centers
+        (olivetti-set-width 0.60)  ;; 65% of window width, auto-centers
         (display-line-numbers-mode 0))))
   :bind
   ("C-c z" . my/zen-mode))
@@ -1778,3 +1779,73 @@ output are visible as they stream in. The split reuses an existing
   (evil-define-key 'normal 'global (kbd "<leader>gr") #'my/nixos-rebuild))
 #+END_SRC
 
+** Music Player (EMMS)
+
+A built-in music player using EMMS with mpv as the backend. Opens a
+two-pane layout with the browser on the left and playlist on the right,
+similar to CMUS. Album art is displayed in a floating buffer when
+available.
+
+The ~C-c o m~ keybind opens the full music layout.
+
+#+BEGIN_SRC emacs-lisp
+(use-package emms
+  :config
+  ;; Use mpv as the backend
+  (emms-all)
+  (emms-default-players)
+  (setq emms-player-list '(emms-player-mpv))
+
+  ;; Point to your music library
+  (setq emms-source-file-default-directory "~/music/")
+
+  ;; Start browser at artist level (CMUS-like tree view)
+  (setq emms-browser-default-browse-type 'info-artist)
+
+  ;; Album art: display cover.jpg / folder.jpg embedded in the browser
+  (setq emms-browser-covers #'emms-browser-cache-thumbnail-async)
+
+  ;; Show album art in a separate buffer when a track plays
+  (setq emms-player-mpv-update-metadata t)
+
+  ;; Repeat and shuffle off by default
+  (setq emms-repeat-playlist nil)
+  (setq emms-random-playlist nil))
+
+;; Evil + EMMS integration — must run after both evil-collection and emms are loaded
+(with-eval-after-load 'emms
+  ;; Let evil-collection handle Evil state assignment for EMMS modes
+  (evil-collection-emms-setup)
+
+  ;; Free SPC in both EMMS maps so the SPC leader gets through
+  (evil-define-key 'normal emms-browser-mode-map (kbd "SPC") nil)
+  (evil-define-key 'normal emms-playlist-mode-map (kbd "SPC") nil)
+
+  ;; CMUS-style keybinds
+  (define-key emms-browser-mode-map (kbd "p") #'emms-pause)
+  (define-key emms-browser-mode-map (kbd "s") #'emms-stop)
+  (define-key emms-browser-mode-map (kbd ">") #'emms-next)
+  (define-key emms-browser-mode-map (kbd "<") #'emms-previous)
+  (define-key emms-browser-mode-map (kbd "r") #'emms-toggle-repeat-track)
+  (define-key emms-browser-mode-map (kbd "R") #'emms-toggle-repeat-playlist)
+  (define-key emms-browser-mode-map (kbd "z") #'emms-shuffle)
+  (define-key emms-browser-mode-map (kbd "C") #'emms-playlist-current-clear)
+  (define-key emms-browser-mode-map (kbd "+") #'emms-volume-raise)
+  (define-key emms-browser-mode-map (kbd "-") #'emms-volume-lower))
+
+;; Two-pane layout: browser left, playlist right (like CMUS)
+(defun my/open-emms ()
+  "Open EMMS in a two-pane layout: browser on the left, playlist on the right."
+  (interactive)
+  (delete-other-windows)
+  (emms-browser)
+  (split-window-right)
+  (other-window 1)
+  (emms-playlist-mode-go)
+  (other-window 1)
+  ;; Scan library if the browser is empty
+  (when (= 0 (hash-table-count emms-cache-db))
+    (emms-add-directory-tree emms-source-file-default-directory)))
+
+(global-set-key (kbd "C-c o m") #'my/open-emms)
+#+END_SRC
