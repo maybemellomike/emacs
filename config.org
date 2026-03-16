@@ -159,7 +159,7 @@ so swapping fonts only ever requires changing a single block.
 #+BEGIN_SRC emacs-lisp
 (set-face-attribute 'default nil        :family "Fantasque Sans Mono"     :height 120)
 (set-face-attribute 'fixed-pitch nil    :family "Fantasque Sans Mono"     :height 120)
-(set-face-attribute 'variable-pitch nil :family "NewComputerModernSans10" :height 140)
+(set-face-attribute 'variable-pitch nil :family "Aporetic Serif" :height 140)
 #+END_SRC
 *** Small Changes for Big Effect
 
@@ -485,7 +485,7 @@ Non LSP based completion that works in all buffers. Popular package that leverag
 #+BEGIN_SRC emacs-lisp
 (use-package olivetti
   :ensure t
-  :init
+  :config
   (defun my/zen-mode ()
     "Toggle a distraction-free writing mode without fullscreening Emacs."
     (interactive)
@@ -765,57 +765,48 @@ be safely rebound.
 #+END_SRC
 
 * Padding
-
 Emacs has no single "padding" setting, so three separate mechanisms are combined
 to produce the effect:
-
 - ~internal-border-width~ — a frame-level property that adds a gap of ~5px~ between
   the outer edge of the Emacs frame and the inner window area. This is the global
   outer padding and is set once on the default frame parameters.
-
 - ~window-margins~ — per-window left and right gutters measured in character columns.
   Set to ~3~ columns on each side inside every window so text does not sit flush
   against the split border or the frame edge.
-
 - ~header-line-format~ — normally used for a status bar at the top of a window.
   By setting it to a single space string it renders as a blank line, producing a
   top padding gap within each window. There is no built-in equivalent for bottom
   padding, but combined with the margins this breaks the flush appearance on all
   four sides.
-
 All three are applied via ~window-configuration-change-hook~ so they reapply
 automatically whenever a new split is created or a buffer is switched.
-
 The ~header-line~ face is explicitly set to inherit the default background so it
 renders as invisible padding rather than a visible grey bar. ~:box nil~ and
 ~:underline nil~ remove any border the theme may add to the face.
-
 #+BEGIN_SRC emacs-lisp
-(add-to-list 'default-frame-alist '(internal-border-width . 5))
-
-(custom-set-faces
- '(header-line ((t (:inherit default
-                    :background unspecified
-                    :foreground unspecified
-                    :box nil
-                    :underline nil)))))
-
-(defun my/set-window-padding ()
-  "Add left/right margins and a blank header line to every window.
-Excludes which-key, minibuffer, olivetti, and transient popup windows."
-  (walk-windows
-   (lambda (win)
-     (unless (or (window-minibuffer-p win)
-                 (string-prefix-p " *which-key*"
-                                  (buffer-name (window-buffer win)))
-                 (buffer-local-value 'olivetti-mode (window-buffer win)))
-       (set-window-margins win 3 3)
-       (with-current-buffer (window-buffer win)
-         (setq-local header-line-format " "))))
-   nil t))
-
-(add-hook 'window-configuration-change-hook #'my/set-window-padding)
-(my/set-window-padding)
+;; (add-to-list 'default-frame-alist '(internal-border-width . 5))
+;; (custom-set-faces
+ ;; '(header-line ((t (:inherit default
+                    ;; :background unspecified
+                    ;; :foreground unspecified
+                    ;; :box nil
+                    ;; :underline nil)))))
+;; (defun my/set-window-padding ()
+  ;; "Add left/right margins and a blank header line to every window.
+;; Excludes which-key, minibuffer, olivetti, and transient popup windows."
+  ;; (walk-windows
+   ;; (lambda (win)
+     ;; (unless (or (window-minibuffer-p win)
+                 ;; (string-prefix-p " *which-key*"
+                                  ;; (buffer-name (window-buffer win)))
+                 ;; (and (boundp 'olivetti-mode)
+                      ;; (buffer-local-value 'olivetti-mode (window-buffer win))))
+       ;; (set-window-margins win 3 3)
+       ;; (with-current-buffer (window-buffer win)
+         ;; (setq-local header-line-format " "))))
+   ;; nil t))
+;; (add-hook 'window-configuration-change-hook #'my/set-window-padding)
+;; (my/set-window-padding)
 #+END_SRC
 
 * Document Management
