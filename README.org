@@ -51,7 +51,7 @@ Of course this can't be totally modular, unfortunately. There are a few things I
 *** Fonts
 I have dynamic fonts setup so the differences are clear and honestly cool looking between code and such and prose.
 
-I am using Fantasque Mono Sans from the Nerd Fonts package for the monospace or "fixed pitched" (as Emacs calls it) fonts. I am using the classic LaTeX New Computer Modern fonts for "variable pitched fonts", currently New Computer Modern Sans 10.
+I am using Fantasque Mono Sans from the Nerd Fonts package for the monospace or "fixed pitched" (as Emacs calls it) fonts. I am using either the classic LaTeX New Computer Modern fonts for "variable pitched fonts", currently New Computer Modern Sans 10; Or the /very cool/ fonts created by Prot, at least for the variable pitched fonts. 
 
 *** Documents
 
@@ -59,3 +59,7 @@ Currently I have both the TeXliveFull package and typst installed on my machine.
 
 *** Spell Check
 This isn't working yet unfortunately due to NixOS's paths and such. But I have hunspell as the backend for FlySpell, the Emacs plugin for spelling. You install hunspell on your machine as well as the dictonaries for the languges you are typing in, or at least hoping to spell check in lol.   
+
+*** Org Roam
+
+Here we have a few requirements, mainly GCC or some C complier as before as well as squeeelite or SQLite (lol) added to the package list. Used for the hash binding thingo Roam does when linking notes (or nodes). 
