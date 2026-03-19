@@ -601,21 +601,32 @@ Other coloured elements:
 Strange second brain style of taking notes in an interconnected web of weirdness?
 
 #+BEGIN_SRC emacs-lisp
-(use-package org-roam
-  :ensure t
-  :init
-  (setq org-roam-v2-ack t)
-  :custom
-  (org-roam-directory "~/dox/roam")
-  (org-roam-completion-everywhere t)
-  :bind
-  (("C-c n l" . org-roam-buffer-toggle)
-   ("C-c n f" . org-roam-node-find)
-   ("C-c n i" . org-roam-node-insert)
-   :map org-mode-map
-   ("C-c n a" . completion-at-point))
-  :config
-  (org-roam-db-autosync-mode))
+  (use-package org-roam
+    :ensure t
+    :init
+    (setq org-roam-v2-ack t)
+    :custom
+    (org-roam-directory "~/dox/roam")
+    (org-roam-completion-everywhere t)
+    (org-roam-capture-templates
+     '(("d" "default" plain
+        "%?"
+        :if-new (file+head "%<%Y%m%d%H%M%S>-${slug}.org" "#+title: ${title}\n")
+        :unnarrowed t))
+     ("p" "project" plain "* Goals\n\n%?\n\n* Tasks\n\n** TODO Add initial tasks\n\n* Dates\n\n"
+      :if-new (file+head "%<%Y%m%d%H%M%S>-${slug}.org" "#+title: ${title}\n#+filetags: Project")
+      :unnarrowed t))
+    :bind
+    (("C-c n l" . org-roam-buffer-toggle)
+     ("C-c n f" . org-roam-node-find)
+     ("C-c n i" . org-roam-node-insert)
+     :map org-mode-map
+     ("C-c n a" . completion-at-point))
+    :bind-keymap
+    ("C-c n d" . org-roam-dailies-map)
+    :config
+    (org-roam-db-autosync-mode))
+(setq org-roam-dailies-directory "journal/")
 #+END_SRC
 
 *** Org Roam UI
@@ -639,7 +650,7 @@ Visual representation of the web of notes in an interactive web GUi.
             (browse-url-default-browser url)))
         browse-url-generic-program "qutebrowser")
   :bind (("C-c n o" . org-roam-ui-open)
-         ("C-c n d" . org-roam-ui-mode)))
+         ("C-c n u" . org-roam-ui-mode)))
 #+END_SRC
 
 * Shrink Path
