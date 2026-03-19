@@ -596,6 +596,48 @@ Other coloured elements:
       :hook (org-mode . toc-org-mode))
 #+END_SRC
 
+*** Org-Roam
+
+Strange second brain style of taking notes in an interconnected web of weirdness?
+
+#+BEGIN_SRC emacs-lisp
+  (use-package org-roam
+       :ensure t
+       :init
+       (setq org-roam-v2-ack t)
+       :custom
+       (org-roam-directory "~/dox/roam")
+       (org-roam-completion-everywhere t)
+  	:bind (("C-c n l" . org-roam-buffer-toggle)
+  		("C-c n f" . org-roam-node-find)
+  		("C-c n i" . org-roam-node-insert))
+  	        :map org-mode-map
+  		("C-c-i" . completion-at-point)
+  	:config
+  	(org-roam-setup))
+#+END_SRC
+
+*** Org Roam UI
+
+
+#+BEGIN_SRC emacs-lisp
+  (use-package org-roam-ui
+    :straight
+      (:host github :repo "org-roam/org-roam-ui" :branch "main" :files ("*.el" "out"))
+      :after org-roam
+  ;;         normally we'd recommend hooking orui after org-roam, but since org-roam does not have
+  ;;         a hookable mode anymore, you're advised to pick something yourself
+  ;;         if you don't care about startup time, use
+  ;;  :hook (after-init . org-roam-ui-mode)
+      :config
+      (setq org-roam-ui-sync-theme t
+            org-roam-ui-follow t
+            org-roam-ui-update-on-save t
+            org-roam-ui-open-on-start t)
+      :bind (("C-c n o" . org-roam-ui-open)
+  	   ("C-c n d" . org-roam-ui-mode)))
+#+END_SRC
+
 * Shrink Path
 #+BEGIN_SRC emacs-lisp
 (use-package shrink-path)
@@ -1452,29 +1494,58 @@ mode, matching the ~mode = "n"~ behaviour from the Nix config.
 contents with the adjacent window, analagous to Vim's ~<C-w> [HJKL]~ (uppercase).
 
 #+BEGIN_SRC emacs-lisp
+  (with-eval-after-load 'evil
+    (evil-set-leader 'normal (kbd "SPC"))
+
+    ;; Save and close
+    (evil-define-key 'normal 'global (kbd "<leader>ww") #'save-buffer)
+    (evil-define-key 'normal 'global (kbd "<leader>wx") #'delete-window)
+    (evil-define-key 'normal 'global (kbd "<leader>wd") #'delete-window)
+
+    ;; Splits
+    (evil-define-key 'normal 'global (kbd "<leader>w-") #'split-window-below)
+    (evil-define-key 'normal 'global (kbd "<leader>w/") #'split-window-right)
+
+    ;; Focus movement
+    (evil-define-key 'normal 'global (kbd "<leader>wh") #'windmove-left)
+    (evil-define-key 'normal 'global (kbd "<leader>wl") #'windmove-right)
+    (evil-define-key 'normal 'global (kbd "<leader>wk") #'windmove-up)
+    (evil-define-key 'normal 'global (kbd "<leader>wj") #'windmove-down)
+
+    ;; Swap window positions
+    (evil-define-key 'normal 'global (kbd "<leader>wml") #'windmove-swap-states-right)
+    (evil-define-key 'normal 'global (kbd "<leader>wmh") #'windmove-swap-states-left)
+    (evil-define-key 'normal 'global (kbd "<leader>wmk") #'windmove-swap-states-up)
+    (evil-define-key 'normal 'global (kbd "<leader>wmj") #'windmove-swap-states-down))
+
+  ;; Focusing windows
+  (evil-define-key 'normal 'global (kbd "<leader>wo") #'delete-other-windows)
+#+END_SRC
+
+**** Toggle Between vert and Horizont
+
+~Leader wR~ to switch the current two windows between a horizontal and a vertical split.
+
+#+BEGIN_SRC emacs-lisp
+(defun my/toggle-split-direction ()
+  "Toggle between horizontal and vertical split for two windows."
+  (interactive)
+  (unless (= (count-windows) 2)
+    (user-error "This only works with exactly 2 windows"))
+  (let* ((win-a (selected-window))
+         (win-b (next-window))
+         (buf-a (window-buffer win-a))
+         (buf-b (window-buffer win-b))
+         (vertical-p (window-combined-p win-a t)))
+    (delete-other-windows)
+    (if vertical-p
+        (split-window-below)
+      (split-window-right))
+    (set-window-buffer (selected-window) buf-a)
+    (set-window-buffer (next-window) buf-b)))
+
 (with-eval-after-load 'evil
-  (evil-set-leader 'normal (kbd "SPC"))
-
-  ;; Save and close
-  (evil-define-key 'normal 'global (kbd "<leader>ww") #'save-buffer)
-  (evil-define-key 'normal 'global (kbd "<leader>wx") #'delete-window)
-  (evil-define-key 'normal 'global (kbd "<leader>wd") #'delete-window)
-
-  ;; Splits
-  (evil-define-key 'normal 'global (kbd "<leader>w-") #'split-window-below)
-  (evil-define-key 'normal 'global (kbd "<leader>w/") #'split-window-right)
-
-  ;; Focus movement
-  (evil-define-key 'normal 'global (kbd "<leader>wh") #'windmove-left)
-  (evil-define-key 'normal 'global (kbd "<leader>wl") #'windmove-right)
-  (evil-define-key 'normal 'global (kbd "<leader>wk") #'windmove-up)
-  (evil-define-key 'normal 'global (kbd "<leader>wj") #'windmove-down)
-
-  ;; Swap window positions
-  (evil-define-key 'normal 'global (kbd "<leader>wml") #'windmove-swap-states-right)
-  (evil-define-key 'normal 'global (kbd "<leader>wmh") #'windmove-swap-states-left)
-  (evil-define-key 'normal 'global (kbd "<leader>wmk") #'windmove-swap-states-up)
-  (evil-define-key 'normal 'global (kbd "<leader>wmj") #'windmove-swap-states-down))
+  (evil-define-key 'normal 'global (kbd "<leader>wR") #'my/toggle-split-direction))
 #+END_SRC
 
 *** Files and Terminal
@@ -1859,3 +1930,4 @@ The ~C-c o m~ keybind opens the full music layout.
 
 (global-set-key (kbd "C-c o m") #'my/open-emms)
 #+END_SRC
+
