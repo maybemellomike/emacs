@@ -54,7 +54,6 @@ Mainly used for dotfile editing and writing prose, I've used a mainly terminal b
 * Straight.el and use-package
 
 In the hopes of keeping this relatively portable I've read that using straight.el helps. 
-
 ~straight.el~ is a declarative, reproducible package manager that clones
 packages directly from their source repositories (Git) rather than downloading
 pre-built tarballs from an archive. This means:
@@ -1416,10 +1415,11 @@ Uses consult with fd (if available) or find as the file source."
 If a process with NAME is already live, does nothing.
 Output goes to a hidden buffer ' *NAME*' (leading space keeps it
 out of the buffer list)."
-  (unless (process-live-p (get-process name))
-    (let ((default-directory dir))
-      (apply #'start-process name (format " *%s*" name) command args)
-      (set-process-query-on-exit-flag (get-process name) nil))))
+  (let ((existing (get-process name)))
+    (unless (and existing (process-live-p existing))
+      (let ((default-directory dir))
+        (let ((proc (apply #'start-process name (format " *%s*" name) command args)))
+          (set-process-query-on-exit-flag proc nil))))))
 #+END_SRC
 
 **** Dotfiles (~C-c o d~)
@@ -1446,11 +1446,15 @@ you work. The process is only spawned if it is not already live, so pressing
 #+BEGIN_SRC emacs-lisp
 (defun my/open-blog ()
   "Open the blog workspace: dired + eshell in ~/dox/blog.
-Starts a hidden hugo server process in the background."
+Starts a hidden hugo server and opens qutebrowser at localhost:1313."
   (interactive)
   (let ((dir (expand-file-name "~/dox/blog")))
     (my/project-layout dir "*eshell:blog*")
-    (my/bg-process "hugo:blog" dir "hugo" "server")))
+    (my/bg-process "hugo:blog" dir "hugo" "server")
+    (run-with-timer
+     0.5 nil
+     (lambda ()
+       (start-process "qutebrowser:blog" nil "qutebrowser" "http://localhost:1313/")))))
 
 (global-set-key (kbd "C-c o b") #'my/open-blog)
 #+END_SRC
@@ -1587,8 +1591,8 @@ Throwing these in also to have spacemacs like promps for find files and terminal
   (evil-define-key 'normal 'global (kbd "<leader>wt") #'my/toggle-eshell-bottom)
   ;; Files
   (evil-define-key 'normal 'global (kbd "<leader>ff") #'find-file)
-  (evil-define-key 'normal 'global (kbd "<leader>fc") #'my/open-config))
-    (evil-define-key 'normal 'global (kbd "<leader>fd") #'my/open-dotfiles)
+  (evil-define-key 'normal 'global (kbd "<leader>fc") #'my/open-config)
+    (evil-define-key 'normal 'global (kbd "<leader>fd") #'my/open-dotfiles))
 #+END_SRC
 
 **** Quick Access Directories
