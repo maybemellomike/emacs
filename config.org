@@ -37,6 +37,7 @@
 - [[#document-management][Document Management]]
   - [[#pdf-tools][PDF Tools]]
   - [[#org--pdf-live-preview][Org → PDF Live Preview]]
+  - [[#beamer-presentations][Beamer Presentations]]
   - [[#typst-major-mode][Typst Major Mode]]
   - [[#typst-live-preview][Typst Live Preview]]
   - [[#org--typst-live-preview][Org → Typst Live Preview]]
@@ -718,6 +719,7 @@ integration is used automatically and ~xclip~ is skipped.
 #+BEGIN_SRC emacs-lisp
 ;; Bridge Emacs kill-ring to the OS clipboard
 (setq select-enable-clipboard t)
+(setq select-enable-primary nil)
 (setq evil-want-clipboard t)
 
 (when (executable-find "wl-copy")
@@ -978,6 +980,30 @@ Enables auto-refresh on save for this buffer."
   (define-key org-mode-map (kbd "C-c p o") #'my/org-pdf-preview-open)
   (define-key org-mode-map (kbd "C-c p s") #'my/org-pdf-preview-stop))
 #+END_SRC
+
+** Beamer Presentations
+
+Registers the ~beamer~ LaTeX class with org-mode and loads the ~ox-beamer~
+export backend so that ~#+LATEX_CLASS: beamer~ is recognised. Without this
+org will error with "unknown class: beamer" even if a full TeX installation
+is present.
+
+Export a beamer org file with ~C-c C-e l b~ for PDF or ~C-c C-e l B~ to
+export and open. The same ~lualatex~ engine configured above is used.
+
+#+BEGIN_SRC emacs-lisp
+(with-eval-after-load 'ox
+  (require 'ox-beamer))
+
+(with-eval-after-load 'ox-latex
+  (add-to-list 'org-latex-classes
+               '("beamer"
+                 "\\documentclass[presentation]{beamer}"
+                 ("\\section{%s}" . "\\section*{%s}")
+                 ("\\subsection{%s}" . "\\subsection*{%s}")
+                 ("\\subsubsection{%s}" . "\\subsubsection*{%s}"))))
+#+END_SRC
+
 
 ** Typst Major Mode
 
@@ -1457,6 +1483,44 @@ Starts a hidden hugo server and opens qutebrowser at localhost:1313."
        (start-process "qutebrowser:blog" nil "qutebrowser" "http://localhost:1313/")))))
 
 (global-set-key (kbd "C-c o b") #'my/open-blog)
+#+END_SRC
+
+**** Deploy Blog (~SPC o B~)
+
+Builds the blog with ~hugo --minify~, runs a dry-run ~rsync~ to show what
+would change, prompts for confirmation, then deploys to the server in a
+visible eshell split. Update the ~remote-path~ if your server path differs.
+
+#+BEGIN_SRC emacs-lisp
+(defun my/deploy-blog ()
+  "Build and deploy the personal blog to heinicke.xyz with confirmation."
+  (interactive)
+  (let* ((dir         (expand-file-name "~/dox/blog"))
+         (remote-path "root@heinicke.xyz:/var/www/site_new/")
+         (buf-name    "*deploy:blog*")
+         (total-height (frame-height))
+         (shell-height (max 15 (/ total-height 3))))
+    (unless (executable-find "hugo")
+      (user-error "hugo not found on PATH"))
+    (unless (executable-find "rsync")
+      (user-error "rsync not found on PATH"))
+    (when (get-buffer-window buf-name)
+      (delete-window (get-buffer-window buf-name)))
+    (when (get-buffer buf-name)
+      (kill-buffer buf-name))
+    (let ((new-win (split-window-below (- total-height shell-height)))
+          (eshell-buffer-name buf-name))
+      (select-window new-win)
+      (eshell 'new)
+      (with-current-buffer buf-name
+        (eshell/cd dir)
+        (eshell-return-to-prompt)
+        (insert (format "hugo --minify && rsync -vaP public/ %s"
+                        (shell-quote-argument remote-path)))
+        (eshell-send-input)))))
+
+(with-eval-after-load 'evil
+  (evil-define-key 'normal 'global (kbd "<leader>gB") #'my/deploy-blog))
 #+END_SRC
 
 **** Sailing Blog (~C-c o s~)
