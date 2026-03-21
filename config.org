@@ -549,52 +549,54 @@ Other coloured elements:
 - ~org-document-info~ — muted grey for #+AUTHOR, #+DATE etc.
 
 #+BEGIN_SRC emacs-lisp
-        (use-package org
-          :straight (:type built-in)  ;; tell straight to use Emacs' built-in org rather than
-                                       ;; cloning from MELPA, avoiding version conflicts
-          :hook
-          ((org-mode . variable-pitch-mode)
-           (org-mode . visual-line-mode))
-          :custom-face
-          ;; Headings — height + weight carried over, foreground colours added
-          (org-level-1 ((t (:height 1.4 :weight bold  :foreground "#F92672"))))
-          (org-level-2 ((t (:height 1.3 :weight bold  :foreground "#66D9EF"))))
-          (org-level-3 ((t (:height 1.2 :weight bold  :foreground "#A6E22E"))))
-          (org-level-4 ((t (:height 1.1 :weight bold  :foreground "#E6DB74"))))
-          (org-level-5 ((t (:height 1.05             :foreground "#FD971F"))))
-          (org-level-6 ((t (:height 1.02             :foreground "#AE81FF"))))
-          (org-level-7 ((t (:height 1.0              :foreground "#75715E"))))
-          (org-level-8 ((t (:height 1.0              :foreground "#75715E"))))
-          ;; Code blocks — background is intentionally unset here so it inherits from
-          ;; the active theme. my/apply-org-theme-faces re-applies theme-appropriate
-          ;; colours whenever the theme is toggled (see Theme Toggle section).
-          (org-block            ((t (:inherit fixed-pitch))))
-          (org-block-begin-line ((t (:inherit fixed-pitch))))
-          (org-block-end-line   ((t (:inherit fixed-pitch))))
-          (org-code             ((t (:inherit fixed-pitch))))
-          ;; Todo keywords
-          (org-todo ((t (:foreground "#F92672" :weight bold))))
-          (org-done ((t (:foreground "#A6E22E" :weight bold))))
-          ;; Timestamps, tags, links
-          (org-date ((t (:foreground "#66D9EF" :underline t))))
-          (org-tag  ((t (:foreground "#FD971F" :weight normal))))
-          (org-link ((t (:foreground "#66D9EF" :underline t))))
-          ;; Definition list terms
-          (org-list-dt ((t (:foreground "#E6DB74" :weight bold))))
-          ;; Document title and info lines (#+TITLE, #+AUTHOR etc.)
-          (org-document-title ((t (:height 1.5 :weight bold :foreground "#F8F8F2"))))
-          (org-document-info  ((t (:foreground "#75715E")))))
+      (use-package org
+        :straight (:type built-in)  ;; tell straight to use Emacs' built-in org rather than
+                                     ;; cloning from MELPA, avoiding version conflicts
+        :hook
+        ((org-mode . variable-pitch-mode)
+         (org-mode . visual-line-mode))
+        :custom-face
+        ;; Headings — height + weight carried over, foreground colours added
+        (org-level-1 ((t (:height 1.4 :weight bold  :foreground "#F92672"))))
+        (org-level-2 ((t (:height 1.3 :weight bold  :foreground "#66D9EF"))))
+        (org-level-3 ((t (:height 1.2 :weight bold  :foreground "#A6E22E"))))
+        (org-level-4 ((t (:height 1.1 :weight bold  :foreground "#E6DB74"))))
+        (org-level-5 ((t (:height 1.05             :foreground "#FD971F"))))
+        (org-level-6 ((t (:height 1.02             :foreground "#AE81FF"))))
+        (org-level-7 ((t (:height 1.0              :foreground "#75715E"))))
+        (org-level-8 ((t (:height 1.0              :foreground "#75715E"))))
+        ;; Code blocks — background is intentionally unset here so it inherits from
+        ;; the active theme. my/apply-org-theme-faces re-applies theme-appropriate
+        ;; colours whenever the theme is toggled (see Theme Toggle section).
+        (org-block            ((t (:inherit fixed-pitch))))
+        (org-block-begin-line ((t (:inherit fixed-pitch))))
+        (org-block-end-line   ((t (:inherit fixed-pitch))))
+        (org-code             ((t (:inherit fixed-pitch))))
+        ;; Todo keywords
+        (org-todo ((t (:foreground "#F92672" :weight bold))))
+        (org-done ((t (:foreground "#A6E22E" :weight bold))))
+        ;; Timestamps, tags, links
+        (org-date ((t (:foreground "#66D9EF" :underline t))))
+        (org-tag  ((t (:foreground "#FD971F" :weight normal))))
+        (org-link ((t (:foreground "#66D9EF" :underline t))))
+        ;; Definition list terms
+        (org-list-dt ((t (:foreground "#E6DB74" :weight bold))))
+        ;; Document title and info lines (#+TITLE, #+AUTHOR etc.)
+        (org-document-title ((t (:height 1.5 :weight bold :foreground "#F8F8F2"))))
+        (org-document-info  ((t (:foreground "#75715E")))))
+        :custom
+        (org-agenda-files '("~/dox/roam"))
 
-    (use-package org-modern
-      :after org
-      :hook
-      (org-mode . org-modern-mode)
-      :custom
-      (org-modern-star '("◉" "○" "✸" "✿" "✤" "✦" "▶" "▷"))
-      (org-modern-list '((45 . "–") (43 . "•") (42 . "◦")))
-      (org-modern-checkbox '((88 . "✔") (45 . "◐") (32 . "○"))))
-    (use-package toc-org
-      :hook (org-mode . toc-org-mode))
+  (use-package org-modern
+    :after org
+    :hook
+    (org-mode . org-modern-mode)
+    :custom
+    (org-modern-star '("◉" "○" "✸" "✿" "✤" "✦" "▶" "▷"))
+    (org-modern-list '((45 . "–") (43 . "•") (42 . "◦")))
+    (org-modern-checkbox '((88 . "✔") (45 . "◐") (32 . "○"))))
+  (use-package toc-org
+    :hook (org-mode . toc-org-mode))
 #+END_SRC
 
 *** Org-Roam
