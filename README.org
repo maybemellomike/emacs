@@ -64,6 +64,10 @@ This isn't working yet unfortunately due to NixOS's paths and such. But I have h
 
 [[./scrot/roam.png]]
 
-Here we have a few requirements, mainly GCC or some C complier as before as well as squeeelite or SQLite (lol) added to the package list. Used for the hash binding thingo Roam does when linking notes (or nodes). 
+Here we have a few requirements, mainly GCC or some C complier as before as well as squeeelite or SQLite (lol) added to the package list. Used for the hash binding thingo Roam does when linking notes (or nodes).
+
+***** Citation Integration
+
+Using Zotero, Citr, and Better BibTeX external sites, pages, pdfs, and books can be sited as nodes in and of themselves from within org roam really simply. 
 
 
