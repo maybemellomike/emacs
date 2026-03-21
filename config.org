@@ -1832,11 +1832,14 @@ This opens a buffer selected much like ~SPC b l~ but it opens it in a new split 
 **** Music with Leader
 
 #+BEGIN_SRC emacs-lisp
-(with-eval-after-load 'evil
-  (evil-define-key 'normal 'global (kbd "<leader>mp") #'emms-pause)
-  (evil-define-key 'normal 'global (kbd "<leader>mn") #'emms-next)
-  (evil-define-key 'normal 'global (kbd "<leader>mb") #'emms-previous)
-  (evil-define-key 'normal 'global (kbd "<leader>ms") #'emms-stop))
+  (with-eval-after-load 'evil
+    (evil-define-key 'normal 'global (kbd "<leader>mp") #'emms-pause)
+    (evil-define-key 'normal 'global (kbd "<leader>mn") #'emms-next)
+    (evil-define-key 'normal 'global (kbd "<leader>mb") #'emms-previous)
+    (evil-define-key 'normal 'global (kbd "<leader>ms") #'emms-stop))
+
+  (with-eval-after-load 'evil
+  (evil-define-key 'normal 'global (kbd "<leader>oa") #'org-agenda))
 #+END_SRC
 
 **** Project Layouts With Leader
