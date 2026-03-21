@@ -181,29 +181,30 @@ Somehow there isn't undo from the get go? Or there is but it is very 1970s in th
 matching, ~marginalia~ adds annotations, and ~consult~ provides the search commands.
 
 #+BEGIN_SRC emacs-lisp
-(use-package vertico
-  :config
-  (vertico-mode 1))
+  (use-package vertico
+    :config
+    (vertico-mode 1))
 
-(use-package orderless
-  :custom
-  (completion-styles '(orderless basic))
-  (completion-category-defaults nil)
-  (completion-category-overrides '((file (styles basic partial-completion)))))
+  (use-package orderless
+    :custom
+    (completion-styles '(orderless basic))
+    (completion-category-defaults nil)
+    (completion-category-overrides '((file (styles basic partial-completion)))))
 
-(use-package marginalia
-  :config
-  (marginalia-mode))
+  (use-package marginalia
+    :config
+    (marginalia-mode))
 
-(use-package consult
-  :bind
-  (("C-p" . consult-buffer)
-   ("C-f" . consult-ripgrep)
-   ("C-s" . consult-line))
-  :custom
-  (consult-preview-key "M-.")
-  :config
-  (recentf-mode 1))
+  (use-package consult
+    :demand t
+    :bind
+    (("C-p" . consult-buffer)
+     ("C-f" . consult-ripgrep)
+     ("C-s" . consult-line))
+    :custom
+    (consult-preview-key "M-.")
+    :config
+    (recentf-mode 1))
 #+END_SRC
 
 
