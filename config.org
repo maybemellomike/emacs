@@ -630,6 +630,31 @@ Strange second brain style of taking notes in an interconnected web of weirdness
 (setq org-roam-dailies-directory "journal/")
 #+END_SRC
 
+**** Citar and Zotero Integration
+Reads the Better BibTeX auto-exported library from Zotero and integrates
+it with Org Roam via ~citar-org-roam~. The bib file is updated automatically
+by Zotero whenever you save something with the browser connector.
+
+#+BEGIN_SRC emacs-lisp
+(use-package citar
+  :after org
+  :custom
+  (citar-bibliography '("~/dox/bibtex/refs.bib"))
+  (citar-notes-paths '("~/dox/roam"))
+  (citar-open-always-create-notes nil)
+  :bind
+  (("C-c n b" . citar-open)
+   ("C-c n B" . citar-insert-citation)
+   :map org-mode-map
+   ("C-c n r" . citar-insert-reference)))
+
+(use-package citar-org-roam
+  :after (citar org-roam)
+  :config
+  (citar-org-roam-mode)
+  (setq citar-org-roam-note-title-template "${author} - ${title}"))
+#+END_SRC
+
 *** Org Roam UI
 
 Visual representation of the web of notes in an interactive web GUi.  
