@@ -19,6 +19,7 @@
   - [[#relative-line-numbers][Relative Line Numbers]]
 - [[#dired--dirvish][Dired / Dirvish]]
 - [[#editing][Editing]]
+- [[#magit][Magit]]
   - [[#evil][Evil]]
   - [[#smartparens][Smartparens]]
   - [[#zen-mode-olivetti--no-fullscreen][Zen Mode (olivetti — no fullscreen)]]
@@ -436,6 +437,20 @@ Yazi-style file navigation with previews and a cleaner display within DirEd.
 #+end_src
 * Editing
 Here I have things such as Evil (vim) mode, completion, and other editing related tweaks.
+
+* Magit
+Git interface for Emacs. Provides a full featured git client within Emacs
+with a clean buffer based interface. ~SPC g g~ opens the status buffer from
+anywhere.
+
+#+BEGIN_SRC emacs-lisp
+  (use-package magit)
+
+    (with-eval-after-load 'evil
+      (evil-define-key 'normal 'global (kbd "<leader>gg") #'magit-status)
+      (evil-define-key 'normal 'global (kbd "<leader>gb") #'magit-blame)
+      (evil-define-key 'normal 'global (kbd "<leader>gl") #'magit-log-current))
+#+END_SRC
 
 ** Evil
 #+BEGIN_SRC emacs-lisp
