@@ -1,7 +1,7 @@
 #+TITLE: Ding-Macs (Emacs for Dinguses)
 #+AUTHOR: liam
 #+DESCRIPTION: Givin' this whirwind a go.
-
+#+BIBLIOGRAPHY: ~/dox/bibtex/refs.bib
 * Here We Go
 
 It's been a long time coming, taked about everywhere, feared by most. I have never really played with this aside from opening up the vanilla version a few times throughout the years and thinking it was ugly.
@@ -70,4 +70,8 @@ Here we have a few requirements, mainly GCC or some C complier as before as well
 
 Using Zotero, Citr, and Better BibTeX external sites, pages, pdfs, and books can be sited as nodes in and of themselves from within org roam really simply. 
 
-
+This also interations into the way things are exported in LateX. You can add the heading as follows:
+#+BEGIN_SRC 
+#+BIBLIOGRAPHY: path/to/bib/latex/file
+#+END_SRC
+and from there Org mode has built in citations. The command is ~org-cite-insert~ and its bound do ~C-c C-x @~ where you're prompted with a list of everything in the .bib file. Thanks to zotero this'll be huge and very complete. Fuzzy find or select one with RET and then do M-RET again to acually insert it. The double selection thing is due to the way the autocomplete list works and its a known strangeness, just deal ya know. 
