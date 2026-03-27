@@ -148,7 +148,7 @@ via ~emacsclient -c~ land here instead of the scratch buffer.
   (dashboard-startup-banner 'logo)
   (dashboard-center-content t)
   (dashboard-vertically-center-content t)
-  (dashboard-items '((recents  . 5)
+  (dashboard-items '((recents  . 7)
                      (bookmarks . 3)
                      (registers . 3)))
   (dashboard-item-names '(("Recent Files:"  . "Recent Files:")
@@ -1982,6 +1982,8 @@ Applies org block faces to match."
 (with-eval-after-load 'evil
   (evil-define-key 'normal 'global (kbd "<leader>tg")
     (lambda () (interactive) (my/load-theme 'doom-gruvbox 'dark)))
+  (evil-define-key 'normal 'global (kbd "<leader>tm")
+    (lambda () (interactive) (my/load-theme 'doom-monokai-machine 'dark)))
   (evil-define-key 'normal 'global (kbd "<leader>ts")
     (lambda () (interactive) (my/load-theme 'ef-symbiosis 'dark)))
   (evil-define-key 'normal 'global (kbd "<leader>te")
