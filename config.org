@@ -13,6 +13,7 @@
 - [[#straightel-and-use-package][Straight.el and use-package]]
 - [[#tidy-filesystem][Tidy filesystem]]
 - [[#ui-cleanup][UI Cleanup]]
+  - [[#dashboard][Dashboard]]
   - [[#silence][Silence]]
   - [[#mode-line-doom-modeline][Mode Line (doom-modeline)]]
   - [[#syntax-highlighting][Syntax Highlighting]]
@@ -132,6 +133,64 @@ Some clean up or behavior things which are more or less built in settings I just
   (global-hl-line-mode 1)
 #+END_SRC
 
+** Dashboard
+~dashboard~ provides a startup screen shown whenever a new frame is opened via
+~emacsclient -c~. Three sections are shown: recent files for quick access to
+recent work, help pages for quick access to built-in documentation, and custom
+layout launchers for jumping directly into a configured workspace.
+~initial-buffer-choice~ is set to the dashboard buffer so that new frames opened
+via ~emacsclient -c~ land here instead of the scratch buffer.
+#+BEGIN_SRC emacs-lisp
+(use-package dashboard
+  :init
+  (dashboard-setup-startup-hook)
+  :custom
+  (dashboard-startup-banner 'logo)
+  (dashboard-center-content t)
+  (dashboard-vertically-center-content t)
+  (dashboard-items '((recents  . 5)
+                     (bookmarks . 3)
+                     (registers . 3)))
+  (dashboard-item-names '(("Recent Files:"  . "Recent Files:")
+                           ("Bookmarks:"     . "Help Pages:")
+                           ("Registers:"     . "Workspaces:")))
+  (dashboard-display-icons-p nil)
+  (dashboard-set-heading-icons nil)
+  (dashboard-set-file-icons nil))
+
+;; Populate bookmarks with help pages
+(setq bookmark-alist
+      '(("Emacs Manual"      . ((filename . "info:emacs")))
+        ("Elisp Manual"      . ((filename . "info:elisp")))
+        ("Org Manual"        . ((filename . "info:org")))))
+
+;; Populate registers with workspace launchers
+(set-register ?d '(file . "my/open-dotfiles"))
+(set-register ?b '(file . "my/open-blog"))
+
+;; Custom register section renderer
+(defun dashboard-insert-registers (list-size)
+  "Insert workspace launcher entries into the dashboard."
+  (dashboard-insert-heading "Workspaces:" nil)
+  (insert "\n")
+  (dolist (entry '(("Dotfiles"     . my/open-dotfiles)
+                   ("Blog"         . my/open-blog)))
+    (let ((name (car entry))
+          (fn   (cdr entry)))
+      (insert "    ")
+      (insert-button name
+                     'action (lambda (_) (call-interactively fn))
+                     'follow-link t
+                     'help-echo (format "Open %s workspace" name))
+      (insert "\n"))))
+
+(add-to-list 'dashboard-item-generators
+             '(registers . dashboard-insert-registers))
+
+(setq initial-buffer-choice
+      (lambda () (get-buffer-create "*dashboard*")))
+#+END_SRC
+
 ** Silence
 
 Disables the audible bell and the visual flash fallback that Emacs uses when the
@@ -211,7 +270,8 @@ matching, ~marginalia~ adds annotations, and ~consult~ provides the search comma
 
 *** Icons
 #+BEGIN_SRC emacs-lisp
-(use-package nerd-icons)
+  (use-package nerd-icons
+    :ensure t)
 #+END_SRC
 
 ** Mode Line (doom-modeline)
@@ -229,7 +289,7 @@ a patched Nerd Font active on the mode-line specifically.
   :init
   (doom-modeline-mode 1)
   :custom
-  (doom-modeline-icon nil)              ;; no icons/glyphs, clean text only
+  (doom-modeline-icon 1)              ;; no icons/glyphs, clean text only
   (doom-modeline-major-mode-icon t)   ;; no major mode icon
   (doom-modeline-time-icon t)   ;; no major mode icon
   (doom-modeline-height 26)             ;; slightly taller than default
@@ -342,59 +402,59 @@ to the user — we re-apply it explicitly after each toggle via
 tinted background on both dark and light themes rather than a jarring mismatch.
 
 #+BEGIN_SRC emacs-lisp
-(use-package ef-themes
-  :custom
-  (custom-safe-themes t))
+  (use-package ef-themes
+    :custom
+    (custom-safe-themes t))
 
-(defvar my/dark-theme  'doom-tomorrow-night
-  "The dark theme to use in `my/toggle-theme'.")
+  (defvar my/dark-theme  'doom-monokai-machine
+    "The dark theme to use in `my/toggle-theme'.")
 
-(defvar my/light-theme 'ef-cyprus
-  "The light theme to use in `my/toggle-theme'.")
+  (defvar my/light-theme 'ef-cyprus
+    "The light theme to use in `my/toggle-theme'.")
 
-(defvar my/current-theme 'dark
-  "Tracks which theme is active: the symbol `dark' or `light'.")
+  (defvar my/current-theme 'dark
+    "Tracks which theme is active: the symbol `dark' or `light'.")
 
-(defun my/apply-org-theme-faces ()
-  "Re-apply org code-block faces relative to the active theme background.
-Skips safely when no real color is available (e.g. daemon startup)."
-  (let* ((bg (face-background 'default nil t)))
-    (when (and bg
-               (not (string= bg "unspecified-bg"))
-               (not (string= bg "unspecified-fg")))
-      (let* ((block-bg (if (eq my/current-theme 'dark)
-                           (color-darken-name bg 4)
-                         (color-darken-name bg 3)))
-             (comment (if (eq my/current-theme 'dark) "#888888" "#999988")))
-        (custom-set-faces
-         `(org-block            ((t (:inherit fixed-pitch :background ,block-bg))))
-         `(org-block-begin-line ((t (:inherit fixed-pitch :foreground ,comment
-                                     :background ,block-bg))))
-         `(org-block-end-line   ((t (:inherit fixed-pitch :foreground ,comment
-                                     :background ,block-bg))))
-         `(org-code             ((t (:inherit fixed-pitch)))))))))
+  (defun my/apply-org-theme-faces ()
+    "Re-apply org code-block faces relative to the active theme background.
+  Skips safely when no real color is available (e.g. daemon startup)."
+    (let* ((bg (face-background 'default nil t)))
+      (when (and bg
+                 (not (string= bg "unspecified-bg"))
+                 (not (string= bg "unspecified-fg")))
+        (let* ((block-bg (if (eq my/current-theme 'dark)
+                             (color-darken-name bg 4)
+                           (color-darken-name bg 3)))
+               (comment (if (eq my/current-theme 'dark) "#888888" "#999988")))
+          (custom-set-faces
+           `(org-block            ((t (:inherit fixed-pitch :background ,block-bg))))
+           `(org-block-begin-line ((t (:inherit fixed-pitch :foreground ,comment
+                                       :background ,block-bg))))
+           `(org-block-end-line   ((t (:inherit fixed-pitch :foreground ,comment
+                                       :background ,block-bg))))
+           `(org-code             ((t (:inherit fixed-pitch)))))))))
 
-;; Apply org faces once a real graphical frame is available
-(add-hook 'server-after-make-frame-hook #'my/apply-org-theme-faces)
+  ;; Apply org faces once a real graphical frame is available
+  (add-hook 'server-after-make-frame-hook #'my/apply-org-theme-faces)
 
-(defun my/toggle-theme ()
-  "Toggle between `my/dark-theme' and `my/light-theme'."
-  (interactive)
-  (if (eq my/current-theme 'dark)
+  (defun my/toggle-theme ()
+    "Toggle between `my/dark-theme' and `my/light-theme'."
+    (interactive)
+    (if (eq my/current-theme 'dark)
+        (progn
+          (mapc #'disable-theme custom-enabled-themes)
+          (load-theme my/light-theme t)
+          (setq my/current-theme 'light)
+          (my/apply-org-theme-faces)
+          (message "Switched to light theme: %s" my/light-theme))
       (progn
         (mapc #'disable-theme custom-enabled-themes)
-        (load-theme my/light-theme t)
-        (setq my/current-theme 'light)
+        (load-theme my/dark-theme t)
+        (setq my/current-theme 'dark)
         (my/apply-org-theme-faces)
-        (message "Switched to light theme: %s" my/light-theme))
-    (progn
-      (mapc #'disable-theme custom-enabled-themes)
-      (load-theme my/dark-theme t)
-      (setq my/current-theme 'dark)
-      (my/apply-org-theme-faces)
-      (message "Switched to dark theme: %s" my/dark-theme))))
+        (message "Switched to dark theme: %s" my/dark-theme))))
 
-(global-set-key (kbd "C-c T") #'my/toggle-theme)
+  (global-set-key (kbd "C-c T") #'my/toggle-theme)
 #+END_SRC
 
 * Dired / Dirvish
@@ -496,6 +556,41 @@ Non LSP based completion that works in all buffers. Popular package that leverag
     (global-corfu-mode 1))
  (with-eval-after-load 'corfu
   (define-key corfu-map (kbd "ESC") #'corfu-quit))
+#+END_SRC
+
+*** Spelling
+This has been a huge pain mainly due to NixOS's funky system paths. Here we go again with Aspell
+
+***** Disable spelling entirely
+Because this keeps not working, this code block entirely disables the whole thing so there aren't obnoxious errors when moving on after frustration lol. 
+
+#+BEGIN_SRC  emacs-lisp
+(with-eval-after-load 'flyspell
+  (setq ispell-program-name "aspell"
+        ispell-dictionary "en_US"
+        flyspell-issue-message-flag nil))
+
+(defun my/toggle-spellcheck ()
+  "Toggle flyspell on and off."
+  (interactive)
+  (if (bound-and-true-p flyspell-mode)
+      (progn
+        (flyspell-mode -1)
+        (message "Spellcheck off."))
+    (progn
+      (flyspell-mode 1)
+      (flyspell-buffer)
+      (message "Spellcheck on."))))
+
+(defun my/flyspell-goto-prev-error ()
+  "Jump to the previous flyspell error."
+  (interactive)
+  (flyspell-goto-next-error t))
+
+(with-eval-after-load 'evil
+  (evil-define-key 'normal 'global (kbd "<leader>ts") #'my/toggle-spellcheck)
+  (evil-define-key 'normal 'global (kbd "]s") #'flyspell-goto-next-error)
+  (evil-define-key 'normal 'global (kbd "[s") #'my/flyspell-goto-prev-error))
 #+END_SRC
 
 ** Zen Mode (olivetti — no fullscreen)
@@ -600,7 +695,7 @@ Other coloured elements:
         (org-document-title ((t (:height 1.5 :weight bold :foreground "#F8F8F2"))))
         (org-document-info  ((t (:foreground "#75715E")))))
         :custom
-        (org-agenda-files '("~/dox/roam"))
+        (setq org-agenda-files '("~/dox/roam"))
 
   (use-package org-modern
     :after org
