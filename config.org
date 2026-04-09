@@ -12,6 +12,7 @@
 - [[#goals][Goals]]
 - [[#straightel-and-use-package][Straight.el and use-package]]
 - [[#tidy-filesystem][Tidy filesystem]]
+- [[#performance][Performance]]
 - [[#ui-cleanup][UI Cleanup]]
   - [[#dashboard][Dashboard]]
   - [[#silence][Silence]]
@@ -115,6 +116,18 @@ Keep backup and auto-save files out of the way in a central location.
       '((".*" "/tmp/" t)))
 #+end_src
 
+* Performance
+There are different settings I've come across which help with performace. Usually in terms of changing the order in which things are loaded or rendering fonts in some spots and not others.
+
+#+BEGIN_SRC emacs-lisp
+    (setq redisplay-skip-fontification-on-input t)
+  (setq-default cursor-in-non-selected-windows nil)
+  (setq highlight-nonselected-windows nil)
+
+  (setq-default bidi-display-reordering 'left-to-right
+              bidi-paragraph-direction 'left-to-right)
+(setq bidi-inhibit-bpa t)
+#+END_SRC
 * UI Cleanup
 
 Some clean up or behavior things which are more or less built in settings I just prefer this way over another.
@@ -141,54 +154,57 @@ layout launchers for jumping directly into a configured workspace.
 ~initial-buffer-choice~ is set to the dashboard buffer so that new frames opened
 via ~emacsclient -c~ land here instead of the scratch buffer.
 #+BEGIN_SRC emacs-lisp
-(use-package dashboard
-  :init
-  (dashboard-setup-startup-hook)
-  :custom
-  (dashboard-startup-banner 'logo)
-  (dashboard-center-content t)
-  (dashboard-vertically-center-content t)
-  (dashboard-items '((recents  . 7)
-                     (bookmarks . 3)
-                     (registers . 3)))
-  (dashboard-item-names '(("Recent Files:"  . "Recent Files:")
-                           ("Bookmarks:"     . "Help Pages:")
-                           ("Registers:"     . "Workspaces:")))
-  (dashboard-display-icons-p nil)
-  (dashboard-set-heading-icons nil)
-  (dashboard-set-file-icons nil))
+  (use-package dashboard
+    :init
+    (dashboard-setup-startup-hook)
+    :custom
+    (dashboard-startup-banner 'logo)
+    (dashboard-center-content t)
+    (dashboard-vertically-center-content t)
+    (dashboard-items '((recents  . 7)
+                       (bookmarks . 3)
+                       (registers . 3)))
+    (dashboard-item-names '(("Recent Files:"  . "Recent Files:")
+                             ("Bookmarks:"     . "Help Pages:")
+                             ("Registers:"     . "Workspaces:")))
+    (dashboard-display-icons-p nil)
+    (dashboard-set-heading-icons nil)
+    (dashboard-set-file-icons nil))
 
-;; Populate bookmarks with help pages
-(setq bookmark-alist
-      '(("Emacs Manual"      . ((filename . "info:emacs")))
-        ("Elisp Manual"      . ((filename . "info:elisp")))
-        ("Org Manual"        . ((filename . "info:org")))))
+  ;; Populate bookmarks with help pages
+  (setq bookmark-alist
+        '(("Emacs Manual"      . ((filename . "info:emacs")))
+          ("Elisp Manual"      . ((filename . "info:elisp")))
+          ("Org Manual"        . ((filename . "info:org")))))
 
-;; Populate registers with workspace launchers
-(set-register ?d '(file . "my/open-dotfiles"))
-(set-register ?b '(file . "my/open-blog"))
+  ;; Populate registers with workspace launchers
+  (set-register ?d '(file . "my/open-dotfiles"))
+  (set-register ?b '(file . "my/open-blog"))
 
-;; Custom register section renderer
-(defun dashboard-insert-registers (list-size)
-  "Insert workspace launcher entries into the dashboard."
-  (dashboard-insert-heading "Workspaces:" nil)
-  (insert "\n")
-  (dolist (entry '(("Dotfiles"     . my/open-dotfiles)
-                   ("Blog"         . my/open-blog)))
-    (let ((name (car entry))
-          (fn   (cdr entry)))
-      (insert "    ")
-      (insert-button name
-                     'action (lambda (_) (call-interactively fn))
-                     'follow-link t
-                     'help-echo (format "Open %s workspace" name))
-      (insert "\n"))))
+  ;; Custom register section renderer
+  (defun dashboard-insert-registers (list-size)
+    "Insert workspace launcher entries into the dashboard."
+    (dashboard-insert-heading "Workspaces:" nil)
+    (insert "\n")
+    (dolist (entry '(("Dotfiles"     . my/open-dotfiles)
+                     ("Blog"         . my/open-blog)))
+      (let ((name (car entry))
+            (fn   (cdr entry)))
+        (insert "    ")
+        (insert-button name
+                       'action (lambda (_) (call-interactively fn))
+                       'follow-link t
+                       'help-echo (format "Open %s workspace" name))
+        (insert "\n"))))
 
-(add-to-list 'dashboard-item-generators
-             '(registers . dashboard-insert-registers))
+  (add-to-list 'dashboard-item-generators
+               '(registers . dashboard-insert-registers))
 
-(setq initial-buffer-choice
-      (lambda () (get-buffer-create "*dashboard*")))
+  (setq initial-buffer-choice
+        (lambda () (get-buffer-create "*dashboard*")))
+(add-hook 'dashboard-mode-hook
+          (lambda ()
+            (display-line-numbers-mode 0)))
 #+END_SRC
 
 ** Silence
