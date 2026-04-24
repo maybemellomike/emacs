@@ -4,7 +4,7 @@
 #+BIBLIOGRAPHY: ~/dox/bibtex/refs.bib
 * Here We Go
 
-It's been a long time coming, taked about everywhere, feared by most. I have never really played with this aside from opening up the vanilla version a few times throughout the years and thinking it was ugly.
+It's been a long time coming, taked about everywhere, feared by most. I have never really played with this aside from opening up the vanilla version a few times throughout the years and thinking it was ugly. I have blabbed on about decisions, features, pains, and enjoyments in a few different blog posts [[https://heinicke.xyz/][on my site here]]. 
 
 ** Starting from Scratch
 
