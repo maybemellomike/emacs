@@ -234,9 +234,9 @@ code blocks, line numbers, and the mode line. Both are set here in one place
 so swapping fonts only ever requires changing a single block.
 
 #+BEGIN_SRC emacs-lisp
-(set-face-attribute 'default nil        :family "Fantasque Sans Mono"     :height 120)
-(set-face-attribute 'fixed-pitch nil    :family "Fantasque Sans Mono"     :height 120)
-(set-face-attribute 'variable-pitch nil :family "Aporetic Serif" :height 140)
+(set-face-attribute 'default nil        :family "Aporetic Serif Mono"     :height 120)
+(set-face-attribute 'fixed-pitch nil    :family "Aporetic Serif Mono"     :height 120)
+(set-face-attribute 'variable-pitch nil :family "CMU Sans Serif" :height 140)
 #+END_SRC
 *** Small Changes for Big Effect
 
@@ -400,7 +400,7 @@ The keys to a stable gutter width are:
   :custom
   (custom-safe-themes t)
   :config
-  (load-theme 'doom-tomorrow-night t))
+  (load-theme 'doom-monokai-machine t))
 #+END_SRC
 
 ***** Theme Toggle
